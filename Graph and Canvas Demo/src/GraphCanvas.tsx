@@ -1398,7 +1398,7 @@ function GraphCore() {
   const onNodesChange = useCallback((changes: any) => setNodes((nds) => applyNodeChanges(changes as any, nds)), [])
   const onEdgesChange = useCallback((changes: any) => setEdges((eds) => applyEdgeChanges(changes as any, eds)), [])
   const onConnect = useCallback((connection: any) => setEdges((eds) => addEdge(connection, eds)), [])
-  const onMoveEnd = useCallback(() => {
+  const onMove = useCallback(() => {
     const vp = getViewport?.()
     if (vp) setZoomPct(vp.zoom * 100)
   }, [getViewport])
@@ -1644,7 +1644,7 @@ function GraphCore() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            onMoveEnd={onMoveEnd}
+            onMove={onMove}
             fitView
             nodeTypes={nodeTypes}
             minZoom={0.25}

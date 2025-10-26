@@ -556,6 +556,10 @@ function ElementNode(props: { id: string; data: NodeData; selected: boolean }) {
     updateNode(id, (n) => ({ ...n, data: { ...n.data, ...updates } }))
   }
 
+  const updateText = (newText: string) => {
+    updateNode(id, (n) => ({ ...n, data: { ...n.data, text: newText } }))
+  }
+
   // Render based on kind
   if (kind === 'horizontalDivider') {
     return (
@@ -615,12 +619,25 @@ function ElementNode(props: { id: string; data: NodeData; selected: boolean }) {
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word'
         }}
+        title="Double-click to edit text"
       >
         {text}
       </div>
 
       <NodeToolbar isVisible={selected} position={'top' as any}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: 'white', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.08)', maxWidth: 600 }}>
+          {/* Text Content Row */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', paddingBottom: 8, borderBottom: '1px solid #f0f0f0' }}>
+            <label style={{ fontSize: 11, color: '#555', fontWeight: 600 }}>Text</label>
+            <input 
+              type="text" 
+              value={text} 
+              onChange={(e) => updateText(e.target.value)}
+              placeholder="Enter text..."
+              style={{ flex: 1, minWidth: 200, fontSize: 11, padding: '4px 8px', border: '1px solid #e5e7eb', borderRadius: 6 }} 
+            />
+          </div>
+          {/* Style Row */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <label style={{ fontSize: 11, color: '#555' }}>Size</label>
             <input type="number" value={fontSize} onChange={(e) => updateStyle({ fontSize: parseInt(e.target.value) || 16 })} style={{ width: 50, fontSize: 11, padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: 6 }} />
@@ -638,6 +655,7 @@ function ElementNode(props: { id: string; data: NodeData; selected: boolean }) {
               <option value="right">Right</option>
             </select>
           </div>
+          {/* Color Row */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', borderTop: '1px solid #f0f0f0', paddingTop: 8 }}>
             <label style={{ fontSize: 11, color: '#555' }}>Text Color</label>
             <input type="color" value={textColor} onChange={(e) => updateStyle({ textColor: e.target.value })} style={{ width: 50, height: 24, border: '1px solid #e5e7eb', borderRadius: 4 }} />

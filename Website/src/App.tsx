@@ -61,8 +61,6 @@ export default function App() {
     }
   };
 
-  const showFooter = currentPage !== 'login' && currentPage !== 'register';
-
   return (
     <div className="min-h-screen flex flex-col relative">
       <div className="relative z-10">
@@ -74,7 +72,7 @@ export default function App() {
         <main className="flex-1">
           {renderPage()}
         </main>
-        {showFooter && <Footer />}
+        <Footer />
       </div>
       <Toaster />
     </div>

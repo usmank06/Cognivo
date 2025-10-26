@@ -31,13 +31,14 @@ import {
   ScatterChart, Scatter, ZAxis,
   FunnelChart, Funnel, LabelList,
   Treemap,
-  Sankey, Rectangle, Layer,
+  Sankey,
   CartesianGrid, XAxis, YAxis, Tooltip, Legend,
   Cell
 } from 'recharts'
 
 // ---------- Types ----------
 type ChartKind = 'line' | 'bar' | 'pie' | 'area' | 'composed' | 'radar' | 'radialBar' | 'scatter' | 'funnel' | 'treemap' | 'sankey'
+type ElementKind = 'title' | 'sectionHeader' | 'horizontalDivider' | 'verticalDivider'
 
 type ChartStyle = {
   // Common styling
@@ -81,20 +82,30 @@ type ChartStyle = {
 type NodeData = {
   label?: string
   notes?: string
-  kind?: ChartKind
+  kind?: ChartKind | ElementKind
   data?: any[] // chart data
   xKey?: string
   yKey?: string
   zKey?: string // for scatter/sankey
   nameKey?: string // for pie/treemap
   style?: ChartStyle
+  // For text elements
+  text?: string
+  fontSize?: number
+  fontWeight?: string
+  textAlign?: 'left' | 'center' | 'right'
+  textColor?: string
+  backgroundColor?: string
+  // For dividers
+  dividerColor?: string
+  dividerThickness?: number
 }
 
 type RFNode = {
   id: string
   position: { x: number; y: number }
   data: NodeData
-  type?: 'default' | 'chart'
+  type?: 'default' | 'chart' | 'element'
   style?: React.CSSProperties // width/height used by NodeResizer
 }
 
@@ -511,15 +522,223 @@ function ChartNode(props: { id: string; data: NodeData; selected: boolean }) {
   )
 }
 
-const nodeTypes = { chart: ChartNode }
+// ---------- Element Node (title, header, dividers) ----------
+function ElementNode(props: { id: string; data: NodeData; selected: boolean }) {
+  const { id, data, selected } = props
+  const updateNode = useNodeUpdater()
+
+  const kind = data.kind as ElementKind
+  const text = data.text ?? 'Text'
+  const fontSize = data.fontSize ?? (kind === 'title' ? 32 : kind === 'sectionHeader' ? 24 : 16)
+  const fontWeight = data.fontWeight ?? (kind === 'title' ? 'bold' : kind === 'sectionHeader' ? '600' : 'normal')
+  const textAlign = data.textAlign ?? 'center'
+  const textColor = data.textColor ?? '#1f2937'
+  const backgroundColor = data.backgroundColor ?? 'transparent'
+  const dividerColor = data.dividerColor ?? '#e5e7eb'
+  const dividerThickness = data.dividerThickness ?? 2
+
+  const onTextBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    const newText = e.currentTarget.textContent ?? ''
+    updateNode(id, (n) => ({ ...n, data: { ...n.data, text: newText } }))
+  }
+
+  const onTextKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && (kind === 'title' || kind === 'sectionHeader')) {
+      e.preventDefault()
+      ;(e.currentTarget as HTMLDivElement).blur()
+    }
+  }
+
+  const updateStyle = (updates: Partial<NodeData>) => {
+    updateNode(id, (n) => ({ ...n, data: { ...n.data, ...updates } }))
+  }
+
+  // Render based on kind
+  if (kind === 'horizontalDivider') {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+        <NodeResizer isVisible={selected} minWidth={100} minHeight={20} handleStyle={{ width: 10, height: 10, borderRadius: 4 }} />
+        <div style={{ width: '100%', height: `${dividerThickness}px`, backgroundColor: dividerColor }} />
+        
+        <NodeToolbar isVisible={selected} position={'top' as any}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'white', padding: '6px 10px', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.08)' }}>
+            <label style={{ fontSize: 11, color: '#555' }}>Color</label>
+            <input type="color" value={dividerColor} onChange={(e) => updateStyle({ dividerColor: e.target.value })} style={{ width: 40, height: 24, border: '1px solid #e5e7eb', borderRadius: 4 }} />
+            <label style={{ fontSize: 11, color: '#555', marginLeft: 8 }}>Thickness</label>
+            <input type="number" value={dividerThickness} onChange={(e) => updateStyle({ dividerThickness: parseInt(e.target.value) || 2 })} style={{ width: 50, fontSize: 11, padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: 6 }} />
+          </div>
+        </NodeToolbar>
+      </div>
+    )
+  }
+
+  if (kind === 'verticalDivider') {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+        <NodeResizer isVisible={selected} minWidth={20} minHeight={100} handleStyle={{ width: 10, height: 10, borderRadius: 4 }} />
+        <div style={{ width: `${dividerThickness}px`, height: '100%', backgroundColor: dividerColor }} />
+        
+        <NodeToolbar isVisible={selected} position={'top' as any}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'white', padding: '6px 10px', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.08)' }}>
+            <label style={{ fontSize: 11, color: '#555' }}>Color</label>
+            <input type="color" value={dividerColor} onChange={(e) => updateStyle({ dividerColor: e.target.value })} style={{ width: 40, height: 24, border: '1px solid #e5e7eb', borderRadius: 4 }} />
+            <label style={{ fontSize: 11, color: '#555', marginLeft: 8 }}>Thickness</label>
+            <input type="number" value={dividerThickness} onChange={(e) => updateStyle({ dividerThickness: parseInt(e.target.value) || 2 })} style={{ width: 50, fontSize: 11, padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: 6 }} />
+          </div>
+        </NodeToolbar>
+      </div>
+    )
+  }
+
+  // Title or Section Header
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor, position: 'relative', padding: '10px', borderRadius: 8 }}>
+      <NodeResizer isVisible={selected} minWidth={100} minHeight={40} handleStyle={{ width: 10, height: 10, borderRadius: 4 }} />
+      
+      <div
+        contentEditable
+        suppressContentEditableWarning
+        onBlur={onTextBlur}
+        onKeyDown={onTextKeyDown}
+        style={{
+          fontSize: `${fontSize}px`,
+          fontWeight,
+          color: textColor,
+          textAlign,
+          outline: 'none',
+          cursor: 'text',
+          userSelect: 'text',
+          width: '100%',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word'
+        }}
+      >
+        {text}
+      </div>
+
+      <NodeToolbar isVisible={selected} position={'top' as any}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: 'white', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.08)', maxWidth: 600 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: 11, color: '#555' }}>Size</label>
+            <input type="number" value={fontSize} onChange={(e) => updateStyle({ fontSize: parseInt(e.target.value) || 16 })} style={{ width: 50, fontSize: 11, padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: 6 }} />
+            <label style={{ fontSize: 11, color: '#555', marginLeft: 8 }}>Weight</label>
+            <select value={fontWeight} onChange={(e) => updateStyle({ fontWeight: e.target.value })} style={{ fontSize: 11, padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: 6 }}>
+              <option value="normal">Normal</option>
+              <option value="500">Medium</option>
+              <option value="600">Semibold</option>
+              <option value="bold">Bold</option>
+            </select>
+            <label style={{ fontSize: 11, color: '#555', marginLeft: 8 }}>Align</label>
+            <select value={textAlign} onChange={(e) => updateStyle({ textAlign: e.target.value as any })} style={{ fontSize: 11, padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: 6 }}>
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', borderTop: '1px solid #f0f0f0', paddingTop: 8 }}>
+            <label style={{ fontSize: 11, color: '#555' }}>Text Color</label>
+            <input type="color" value={textColor} onChange={(e) => updateStyle({ textColor: e.target.value })} style={{ width: 50, height: 24, border: '1px solid #e5e7eb', borderRadius: 4 }} />
+            <label style={{ fontSize: 11, color: '#555', marginLeft: 8 }}>Background</label>
+            <input type="color" value={backgroundColor === 'transparent' ? '#ffffff' : backgroundColor} onChange={(e) => updateStyle({ backgroundColor: e.target.value })} style={{ width: 50, height: 24, border: '1px solid #e5e7eb', borderRadius: 4 }} />
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, marginLeft: 8 }}>
+              <input type="checkbox" checked={backgroundColor === 'transparent'} onChange={(e) => updateStyle({ backgroundColor: e.target.checked ? 'transparent' : '#ffffff' })} />
+              Transparent BG
+            </label>
+          </div>
+        </div>
+      </NodeToolbar>
+    </div>
+  )
+}
+
+const nodeTypes = { chart: ChartNode, element: ElementNode }
 
 // ---------- Sample graphs (for quick testing) ----------
 const EXAMPLES: Record<string, RFState> = {
   'All Charts Showcase': {
     nodes: [
+      // Page Title
+      {
+        id: 'title1', type: 'element', position: { x: 0, y: -120 }, style: { width: 800, height: 80 },
+        data: {
+          kind: 'title',
+          text: 'Interactive Chart Dashboard',
+          fontSize: 48,
+          fontWeight: 'bold',
+          textAlign: 'center',
+          textColor: '#1f2937',
+          backgroundColor: 'transparent'
+        }
+      },
+      // Section Header - Charts
+      {
+        id: 'header1', type: 'element', position: { x: 0, y: -30 }, style: { width: 1300, height: 50 },
+        data: {
+          kind: 'sectionHeader',
+          text: 'Time Series & Categorical Charts',
+          fontSize: 24,
+          fontWeight: '600',
+          textAlign: 'left',
+          textColor: '#374151',
+          backgroundColor: '#f3f4f6'
+        }
+      },
+      // Horizontal Divider
+      {
+        id: 'divider1', type: 'element', position: { x: 0, y: 270 }, style: { width: 1300, height: 10 },
+        data: {
+          kind: 'horizontalDivider',
+          dividerColor: '#e5e7eb',
+          dividerThickness: 2
+        }
+      },
+      // Section Header - Analysis
+      {
+        id: 'header2', type: 'element', position: { x: 0, y: 590 }, style: { width: 1300, height: 50 },
+        data: {
+          kind: 'sectionHeader',
+          text: 'Multi-Dimensional Analysis',
+          fontSize: 24,
+          fontWeight: '600',
+          textAlign: 'left',
+          textColor: '#374151',
+          backgroundColor: '#f3f4f6'
+        }
+      },
+      // Vertical Divider
+      {
+        id: 'vdivider1', type: 'element', position: { x: 850, y: 660 }, style: { width: 10, height: 250 },
+        data: {
+          kind: 'verticalDivider',
+          dividerColor: '#d1d5db',
+          dividerThickness: 3
+        }
+      },
+      // Horizontal Divider
+      {
+        id: 'divider2', type: 'element', position: { x: 0, y: 940 }, style: { width: 1300, height: 10 },
+        data: {
+          kind: 'horizontalDivider',
+          dividerColor: '#e5e7eb',
+          dividerThickness: 2
+        }
+      },
+      // Section Header - Advanced
+      {
+        id: 'header3', type: 'element', position: { x: 0, y: 950 }, style: { width: 1300, height: 50 },
+        data: {
+          kind: 'sectionHeader',
+          text: 'Advanced Visualizations',
+          fontSize: 24,
+          fontWeight: '600',
+          textAlign: 'left',
+          textColor: '#374151',
+          backgroundColor: '#f3f4f6'
+        }
+      },
       // Line Chart
       {
-        id: 'line1', type: 'chart', position: { x: 0, y: 0 }, style: { width: 400, height: 250 },
+        id: 'line1', type: 'chart', position: { x: 0, y: 40 }, style: { width: 400, height: 250 },
         data: {
           label: 'Line Chart - Daily Visitors',
           kind: 'line',
@@ -548,7 +767,7 @@ const EXAMPLES: Record<string, RFState> = {
       },
       // Bar Chart
       {
-        id: 'bar1', type: 'chart', position: { x: 450, y: 0 }, style: { width: 400, height: 250 },
+        id: 'bar1', type: 'chart', position: { x: 450, y: 40 }, style: { width: 400, height: 250 },
         data: {
           label: 'Bar Chart - Monthly Sales',
           kind: 'bar',
@@ -572,7 +791,7 @@ const EXAMPLES: Record<string, RFState> = {
       },
       // Area Chart
       {
-        id: 'area1', type: 'chart', position: { x: 900, y: 0 }, style: { width: 400, height: 250 },
+        id: 'area1', type: 'chart', position: { x: 900, y: 40 }, style: { width: 400, height: 250 },
         data: {
           label: 'Area Chart - Traffic Growth',
           kind: 'area',
@@ -601,7 +820,7 @@ const EXAMPLES: Record<string, RFState> = {
       },
       // Composed Chart
       {
-        id: 'composed1', type: 'chart', position: { x: 0, y: 300 }, style: { width: 400, height: 280 },
+        id: 'composed1', type: 'chart', position: { x: 0, y: 330 }, style: { width: 400, height: 280 },
         data: {
           label: 'Composed - Multi-metric Dashboard',
           kind: 'composed',
@@ -630,7 +849,7 @@ const EXAMPLES: Record<string, RFState> = {
       },
       // Pie Chart
       {
-        id: 'pie1', type: 'chart', position: { x: 450, y: 300 }, style: { width: 380, height: 280 },
+        id: 'pie1', type: 'chart', position: { x: 450, y: 330 }, style: { width: 380, height: 280 },
         data: {
           label: 'Pie Chart - Market Share',
           kind: 'pie',
@@ -654,7 +873,7 @@ const EXAMPLES: Record<string, RFState> = {
       },
       // Radar Chart
       {
-        id: 'radar1', type: 'chart', position: { x: 880, y: 300 }, style: { width: 400, height: 280 },
+        id: 'radar1', type: 'chart', position: { x: 880, y: 330 }, style: { width: 400, height: 280 },
         data: {
           label: 'Radar - Skills Assessment',
           kind: 'radar',
@@ -680,7 +899,7 @@ const EXAMPLES: Record<string, RFState> = {
       },
       // Radial Bar Chart
       {
-        id: 'radialBar1', type: 'chart', position: { x: 0, y: 630 }, style: { width: 400, height: 280 },
+        id: 'radialBar1', type: 'chart', position: { x: 0, y: 660 }, style: { width: 400, height: 280 },
         data: {
           label: 'Radial Bar - Age Demographics',
           kind: 'radialBar',
@@ -706,7 +925,7 @@ const EXAMPLES: Record<string, RFState> = {
       },
       // Scatter Chart
       {
-        id: 'scatter1', type: 'chart', position: { x: 450, y: 630 }, style: { width: 400, height: 280 },
+        id: 'scatter1', type: 'chart', position: { x: 450, y: 660 }, style: { width: 400, height: 280 },
         data: {
           label: 'Scatter - Height vs Weight',
           kind: 'scatter',
@@ -734,7 +953,7 @@ const EXAMPLES: Record<string, RFState> = {
       },
       // Funnel Chart
       {
-        id: 'funnel1', type: 'chart', position: { x: 900, y: 630 }, style: { width: 400, height: 280 },
+        id: 'funnel1', type: 'chart', position: { x: 900, y: 660 }, style: { width: 400, height: 280 },
         data: {
           label: 'Funnel - Sales Pipeline',
           kind: 'funnel',
@@ -756,7 +975,7 @@ const EXAMPLES: Record<string, RFState> = {
       },
       // Treemap
       {
-        id: 'treemap1', type: 'chart', position: { x: 0, y: 960 }, style: { width: 520, height: 320 },
+        id: 'treemap1', type: 'chart', position: { x: 0, y: 1020 }, style: { width: 520, height: 320 },
         data: {
           label: 'Treemap - Storage Distribution',
           kind: 'treemap',
@@ -778,7 +997,7 @@ const EXAMPLES: Record<string, RFState> = {
       },
       // Sankey
       {
-        id: 'sankey1', type: 'chart', position: { x: 570, y: 960 }, style: { width: 700, height: 320 },
+        id: 'sankey1', type: 'chart', position: { x: 570, y: 1020 }, style: { width: 700, height: 320 },
         data: {
           label: 'Sankey - User Flow',
           kind: 'sankey',
@@ -849,6 +1068,178 @@ const EXAMPLES: Record<string, RFState> = {
             { day: 'Mon', value: 12 }, { day: 'Tue', value: 19 }, { day: 'Wed', value: 15 },
             { day: 'Thu', value: 25 }, { day: 'Fri', value: 22 }, { day: 'Sat', value: 30 }
           ]
+        }
+      },
+    ],
+    edges: [],
+  },
+  'Text & Layout Elements': {
+    nodes: [
+      // Page Title
+      {
+        id: 'title-demo', type: 'element', position: { x: 100, y: 0 }, style: { width: 600, height: 100 },
+        data: {
+          kind: 'title',
+          text: 'Dashboard Title Example',
+          fontSize: 48,
+          fontWeight: 'bold',
+          textAlign: 'center',
+          textColor: '#1f2937',
+          backgroundColor: 'transparent'
+        }
+      },
+      // Section Headers
+      {
+        id: 'header-1', type: 'element', position: { x: 0, y: 120 }, style: { width: 800, height: 60 },
+        data: {
+          kind: 'sectionHeader',
+          text: 'Section One - Sales Overview',
+          fontSize: 28,
+          fontWeight: '600',
+          textAlign: 'left',
+          textColor: '#374151',
+          backgroundColor: '#f9fafb'
+        }
+      },
+      {
+        id: 'header-2', type: 'element', position: { x: 0, y: 400 }, style: { width: 800, height: 60 },
+        data: {
+          kind: 'sectionHeader',
+          text: 'Section Two - Performance Metrics',
+          fontSize: 28,
+          fontWeight: '600',
+          textAlign: 'left',
+          textColor: '#1e40af',
+          backgroundColor: '#dbeafe'
+        }
+      },
+      // Horizontal Dividers
+      {
+        id: 'hdiv-1', type: 'element', position: { x: 0, y: 200 }, style: { width: 800, height: 8 },
+        data: {
+          kind: 'horizontalDivider',
+          dividerColor: '#e5e7eb',
+          dividerThickness: 2
+        }
+      },
+      {
+        id: 'hdiv-2', type: 'element', position: { x: 0, y: 380 }, style: { width: 800, height: 8 },
+        data: {
+          kind: 'horizontalDivider',
+          dividerColor: '#60a5fa',
+          dividerThickness: 4
+        }
+      },
+      {
+        id: 'hdiv-3', type: 'element', position: { x: 0, y: 680 }, style: { width: 800, height: 12 },
+        data: {
+          kind: 'horizontalDivider',
+          dividerColor: '#9ca3af',
+          dividerThickness: 1
+        }
+      },
+      // Vertical Dividers
+      {
+        id: 'vdiv-1', type: 'element', position: { x: 250, y: 220 }, style: { width: 8, height: 150 },
+        data: {
+          kind: 'verticalDivider',
+          dividerColor: '#d1d5db',
+          dividerThickness: 2
+        }
+      },
+      {
+        id: 'vdiv-2', type: 'element', position: { x: 550, y: 220 }, style: { width: 12, height: 150 },
+        data: {
+          kind: 'verticalDivider',
+          dividerColor: '#6b7280',
+          dividerThickness: 4
+        }
+      },
+      // Text boxes with backgrounds
+      {
+        id: 'text-1', type: 'element', position: { x: 50, y: 230 }, style: { width: 180, height: 120 },
+        data: {
+          kind: 'sectionHeader',
+          text: 'Sales\n$125K',
+          fontSize: 20,
+          fontWeight: 'bold',
+          textAlign: 'center',
+          textColor: '#ffffff',
+          backgroundColor: '#10b981'
+        }
+      },
+      {
+        id: 'text-2', type: 'element', position: { x: 280, y: 230 }, style: { width: 180, height: 120 },
+        data: {
+          kind: 'sectionHeader',
+          text: 'Users\n1,234',
+          fontSize: 20,
+          fontWeight: 'bold',
+          textAlign: 'center',
+          textColor: '#ffffff',
+          backgroundColor: '#3b82f6'
+        }
+      },
+      {
+        id: 'text-3', type: 'element', position: { x: 580, y: 230 }, style: { width: 180, height: 120 },
+        data: {
+          kind: 'sectionHeader',
+          text: 'Growth\n+23%',
+          fontSize: 20,
+          fontWeight: 'bold',
+          textAlign: 'center',
+          textColor: '#ffffff',
+          backgroundColor: '#8b5cf6'
+        }
+      },
+      // Different text alignments
+      {
+        id: 'text-left', type: 'element', position: { x: 50, y: 480 }, style: { width: 200, height: 80 },
+        data: {
+          kind: 'sectionHeader',
+          text: 'Left Aligned Text',
+          fontSize: 18,
+          fontWeight: 'normal',
+          textAlign: 'left',
+          textColor: '#1f2937',
+          backgroundColor: '#f3f4f6'
+        }
+      },
+      {
+        id: 'text-center', type: 'element', position: { x: 300, y: 480 }, style: { width: 200, height: 80 },
+        data: {
+          kind: 'sectionHeader',
+          text: 'Center Aligned',
+          fontSize: 18,
+          fontWeight: '500',
+          textAlign: 'center',
+          textColor: '#1f2937',
+          backgroundColor: '#f3f4f6'
+        }
+      },
+      {
+        id: 'text-right', type: 'element', position: { x: 550, y: 480 }, style: { width: 200, height: 80 },
+        data: {
+          kind: 'sectionHeader',
+          text: 'Right Aligned',
+          fontSize: 18,
+          fontWeight: '600',
+          textAlign: 'right',
+          textColor: '#1f2937',
+          backgroundColor: '#f3f4f6'
+        }
+      },
+      // Custom styled text
+      {
+        id: 'text-custom', type: 'element', position: { x: 100, y: 600 }, style: { width: 600, height: 60 },
+        data: {
+          kind: 'title',
+          text: 'Custom Styled Header',
+          fontSize: 32,
+          fontWeight: 'bold',
+          textAlign: 'center',
+          textColor: '#dc2626',
+          backgroundColor: '#fef2f2'
         }
       },
     ],
@@ -1085,6 +1476,8 @@ function GraphCore() {
             onMoveEnd={onMoveEnd}
             fitView
             nodeTypes={nodeTypes}
+            minZoom={0.25}
+            maxZoom={2}
           >
             <Background />
             <MiniMap position="bottom-right" pannable zoomable style={{ width: 200, height: 140, borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.12)' }} />

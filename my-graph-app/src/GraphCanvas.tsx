@@ -15,7 +15,10 @@ import ReactFlow, {
   useReactFlow,
   NodeResizer,
   NodeToolbar,
+  getNodesBounds,
+  getViewportForBounds,
 } from 'reactflow'
+import { toPng } from 'html-to-image'
 import 'reactflow/dist/style.css'
 
 // Recharts (for embedded charts as nodes)
@@ -1297,6 +1300,8 @@ function TopBar({
   onLoadExample,
   onCopyJSON,
   onDownloadJSON,
+  onExportImage,
+  onExportPDF,
 }: {
   mode: 'graph' | 'code'
   setMode: (m: 'graph' | 'code') => void
@@ -1310,6 +1315,8 @@ function TopBar({
   onLoadExample: () => void
   onCopyJSON: () => void
   onDownloadJSON: () => void
+  onExportImage: () => void
+  onExportPDF: () => void
 }) {
   return (
     <div className="fixed top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur border-b border-gray-200">
@@ -1358,6 +1365,9 @@ function TopBar({
           <div className="h-5 w-px bg-gray-200" />
           <button className="px-3 py-1 text-sm border border-gray-300 rounded-lg bg-white" onClick={onCopyJSON}>Copy JSON</button>
           <button className="px-3 py-1 text-sm border border-gray-300 rounded-lg bg-white" onClick={onDownloadJSON}>Download</button>
+          <div className="h-5 w-px bg-gray-200" />
+          <button className="px-3 py-1 text-sm border border-gray-300 rounded-lg bg-white" onClick={onExportImage}>Export PNG</button>
+          <button className="px-3 py-1 text-sm border border-gray-300 rounded-lg bg-white" onClick={onExportPDF}>Export PDF</button>
         </div>
       </div>
     </div>
@@ -1428,6 +1438,62 @@ function GraphCore() {
     URL.revokeObjectURL(url)
   }
 
+  // Export as PNG
+  const onExportImage = () => {
+    const viewportElement = document.querySelector('.react-flow__viewport') as HTMLElement
+    if (!viewportElement) return
+
+    toPng(viewportElement, {
+      backgroundColor: '#ffffff',
+      width: viewportElement.offsetWidth,
+      height: viewportElement.offsetHeight,
+    })
+      .then((dataUrl) => {
+        const a = document.createElement('a')
+        a.href = dataUrl
+        a.download = 'graph.png'
+        a.click()
+      })
+      .catch((err) => {
+        console.error('Failed to export image:', err)
+        alert('Failed to export image')
+      })
+  }
+
+  // Export as PDF
+  const onExportPDF = async () => {
+    const viewportElement = document.querySelector('.react-flow__viewport') as HTMLElement
+    if (!viewportElement) return
+
+    try {
+      const dataUrl = await toPng(viewportElement, {
+        backgroundColor: '#ffffff',
+        width: viewportElement.offsetWidth,
+        height: viewportElement.offsetHeight,
+      })
+
+      // Dynamically import jsPDF to avoid bundling issues
+      const { jsPDF } = await import('jspdf')
+      
+      const img = new Image()
+      img.src = dataUrl
+      img.onload = () => {
+        const imgWidth = img.width
+        const imgHeight = img.height
+        
+        // Create PDF in landscape or portrait based on image dimensions
+        const orientation = imgWidth > imgHeight ? 'landscape' : 'portrait'
+        const pdf = new jsPDF(orientation, 'px', [imgWidth, imgHeight])
+        
+        pdf.addImage(dataUrl, 'PNG', 0, 0, imgWidth, imgHeight)
+        pdf.save('graph.pdf')
+      }
+    } catch (err) {
+      console.error('Failed to export PDF:', err)
+      alert('Failed to export PDF')
+    }
+  }
+
   const applyCode = () => {
     try {
       const parsed = JSON.parse(codeText) as RFState
@@ -1462,6 +1528,8 @@ function GraphCore() {
         onLoadExample={onLoadExample}
         onCopyJSON={onCopyJSON}
         onDownloadJSON={onDownloadJSON}
+        onExportImage={onExportImage}
+        onExportPDF={onExportPDF}
       />
 
       {/* Workspace */}

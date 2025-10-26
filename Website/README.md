@@ -1,7 +1,7 @@
 
-  # Global Navigation Bar Design
+  # Noesis
 
-  This is a code bundle for Global Navigation Bar Design. The original project is available at https://www.figma.com/design/OpZdKf3fZOyX7IOei34wm7/Global-Navigation-Bar-Design.
+  A modern data platform and collaborative workspace.
 
   ## Running the code
 

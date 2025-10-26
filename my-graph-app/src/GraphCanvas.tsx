@@ -1582,9 +1582,9 @@ function GraphCore() {
         const scaledWidth = imgWidth * scale
         const scaledHeight = imgHeight * scale
         
-        // Center on page
+        // Center horizontally, align to top with margin
         const x = (pageWidth - scaledWidth) / 2
-        const y = (pageHeight - scaledHeight) / 2
+        const y = margin
         
         // Create letter-sized PDF
         const pdf = new jsPDF('portrait', 'pt', 'letter')

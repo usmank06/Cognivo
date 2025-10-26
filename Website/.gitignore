@@ -3,6 +3,16 @@ node_modules/
 /.pnp
 .pnp.js
 
+# MongoDB Data (Local persistence - DO NOT COMMIT)
+mongodb-data/
+
+# Environment variables (Never commit these!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
 # Testing
 /coverage
 

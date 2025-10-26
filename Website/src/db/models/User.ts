@@ -4,6 +4,8 @@ export interface IUser extends Document {
   username: string;
   email: string;
   password: string;
+  totalTokensSpent: number;
+  totalMoneySpent: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,7 +29,14 @@ const UserSchema: Schema = new Schema(
     password: {
       type: String,
       required: true,
-      minlength: 6,
+    },
+    totalTokensSpent: {
+      type: Number,
+      default: 0,
+    },
+    totalMoneySpent: {
+      type: Number,
+      default: 0,
     },
   },
   {
@@ -36,3 +45,52 @@ const UserSchema: Schema = new Schema(
 );
 
 export const User = mongoose.model<IUser>('User', UserSchema);
+
+// Deleted users collection (soft delete)
+export interface IDeletedUser extends Document {
+  username: string;
+  email: string;
+  password: string;
+  totalTokensSpent: number;
+  totalMoneySpent: number;
+  deletedAt: Date;
+  originalCreatedAt: Date;
+  originalUpdatedAt: Date;
+}
+
+const DeletedUserSchema: Schema = new Schema(
+  {
+    username: {
+      type: String,
+      required: true,
+    },
+    email: {
+      type: String,
+      required: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    totalTokensSpent: {
+      type: Number,
+      default: 0,
+    },
+    totalMoneySpent: {
+      type: Number,
+      default: 0,
+    },
+    deletedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    originalCreatedAt: {
+      type: Date,
+    },
+    originalUpdatedAt: {
+      type: Date,
+    },
+  }
+);
+
+export const DeletedUser = mongoose.model<IDeletedUser>('DeletedUser', DeletedUserSchema);

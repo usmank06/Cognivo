@@ -15,21 +15,25 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('landing');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
+  const [userData, setUserData] = useState<any>(null);
 
-  const handleLogin = (user: string) => {
+  const handleLogin = (user: string, data: any) => {
     setUsername(user);
+    setUserData(data);
     setIsLoggedIn(true);
     setCurrentPage('board');
   };
 
-  const handleRegister = (user: string) => {
+  const handleRegister = (user: string, data: any) => {
     setUsername(user);
+    setUserData(data);
     setIsLoggedIn(true);
     setCurrentPage('board');
   };
 
   const handleLogout = () => {
     setUsername('');
+    setUserData(null);
     setIsLoggedIn(false);
     setCurrentPage('landing');
   };

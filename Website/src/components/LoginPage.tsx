@@ -3,20 +3,39 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { toast } from 'sonner';
+import { loginUser } from '../api/client';
 
 interface LoginPageProps {
-  onLogin: (username: string) => void;
+  onLogin: (username: string, userData: any) => void;
   onNavigate: (page: string) => void;
 }
 
 export function LoginPage({ onLogin, onNavigate }: LoginPageProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username && password) {
-      onLogin(username);
+    if (!username || !password) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await loginUser(username, password);
+      if (result.success && result.user) {
+        toast.success('Welcome back!');
+        onLogin(username, result.user);
+      } else {
+        toast.error(result.error || 'Login failed');
+      }
+    } catch (error) {
+      toast.error('Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -53,8 +72,8 @@ export function LoginPage({ onLogin, onNavigate }: LoginPageProps) {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full">
-              Login
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Logging in...' : 'Login'}
             </Button>
             <p className="text-sm text-muted-foreground text-center">
               Don't have an account?{' '}

@@ -4,9 +4,11 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { registerUser } from '../api/client';
 
 interface RegisterPageProps {
-  onRegister: (username: string) => void;
+  onRegister: (username: string, userData: any) => void;
   onNavigate: (page: string) => void;
 }
 
@@ -14,11 +16,28 @@ export function RegisterPage({ onRegister, onNavigate }: RegisterPageProps) {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email && username && password) {
-      onRegister(username);
+    if (!email || !username || !password) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await registerUser(email, username, password);
+      if (result.success && result.user) {
+        toast.success('Account created successfully!');
+        onRegister(username, result.user);
+      } else {
+        toast.error(result.error || 'Registration failed');
+      }
+    } catch (error) {
+      toast.error('Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -72,8 +91,8 @@ export function RegisterPage({ onRegister, onNavigate }: RegisterPageProps) {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full">
-              Register
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Creating account...' : 'Register'}
             </Button>
             <p className="text-sm text-muted-foreground text-center">
               Already have an account?{' '}

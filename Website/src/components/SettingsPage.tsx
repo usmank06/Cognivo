@@ -1,13 +1,13 @@
-import { useState } from 'react';
-import { Download, Key, Trash2, LogOut } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Download, Key, Trash2, LogOut, Coins, DollarSign, User, Mail } from 'lucide-react';
 import { Button } from './ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Separator } from './ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+import { getUserData, changePassword, deleteUserAccount } from '../api/client';
 
 interface SettingsPageProps {
   username: string;
@@ -20,10 +20,25 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [userData, setUserData] = useState<any>(null);
+
+  useEffect(() => {
+    loadUserData();
+  }, [username]);
+
+  const loadUserData = async () => {
+    const result = await getUserData(username);
+    if (result.success && result.user) {
+      setUserData(result.user);
+    }
+  };
 
   const handleDownloadData = () => {
     const data = {
       username,
+      email: userData?.email || '',
+      totalTokensSpent: userData?.totalTokensSpent || 0,
+      totalMoneySpent: userData?.totalMoneySpent || 0,
       downloadDate: new Date().toISOString(),
       boards: [],
       sources: [],
@@ -40,29 +55,42 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
     toast.success('Data downloaded successfully');
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
       toast.error('Passwords do not match');
       return;
     }
-    if (newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
+
+    const result = await changePassword(username, currentPassword, newPassword);
+    if (result.success) {
+      toast.success('Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setIsPasswordDialogOpen(false);
+    } else {
+      toast.error(result.error || 'Failed to change password');
     }
-    // In a real app, this would call an API
-    toast.success('Password changed successfully');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setIsPasswordDialogOpen(false);
   };
 
-  const handleDeleteAccount = () => {
-    // In a real app, this would call an API to delete the account
-    toast.success('Account deleted. Logging out...');
-    setTimeout(() => {
-      onLogout();
-    }, 1500);
+  const handleDeleteAccount = async () => {
+    const result = await deleteUserAccount(username);
+    if (result.success) {
+      toast.success('Account deleted. Logging out...');
+      setTimeout(() => {
+        onLogout();
+      }, 1500);
+    } else {
+      toast.error(result.error || 'Failed to delete account');
+    }
+  };
+
+  const formatMoney = (amount: number) => {
+    return `$${amount.toFixed(2)}`;
+  };
+
+  const formatTokens = (amount: number) => {
+    return amount.toLocaleString();
   };
 
   return (
@@ -70,87 +98,73 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
       <div className="max-w-3xl mx-auto px-6 py-12">
         <div className="mb-8">
           <h1 className="text-3xl mb-2">Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your account and preferences
-          </p>
+          <p className="text-muted-foreground">Manage your account</p>
         </div>
 
-        <div className="space-y-6">
-          {/* Account Info */}
+        <div className="space-y-4">
+          {/* Account Info & Usage Stats - Compact */}
           <Card>
             <CardHeader>
-              <CardTitle>Account Information</CardTitle>
-              <CardDescription>Your account details</CardDescription>
+              <CardTitle>Account</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Username</span>
-                  <span>{username}</span>
-                </div>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm text-muted-foreground flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Username
+                </span>
+                <span className="font-medium">{username}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email
+                </span>
+                <span className="font-medium">{userData?.email || 'Loading...'}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Coins className="h-4 w-4" />
+                  Total Tokens Spent
+                </span>
+                <span className="font-medium">{formatTokens(userData?.totalTokensSpent || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm text-muted-foreground flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Total Money Spent
+                </span>
+                <span className="font-medium">{formatMoney(userData?.totalMoneySpent || 0)}</span>
               </div>
             </CardContent>
           </Card>
 
-          <Separator />
-
-          {/* Download Data */}
+          {/* Actions - Compact */}
           <Card>
             <CardHeader>
-              <CardTitle>Download Your Data</CardTitle>
-              <CardDescription>
-                Export all your boards, sources, and settings
-              </CardDescription>
+              <CardTitle>Actions</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
               <Button 
                 onClick={handleDownloadData}
                 variant="outline"
-                className="w-full sm:w-auto"
+                className="w-full justify-start"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Download Data
               </Button>
-            </CardContent>
-          </Card>
-
-          <Separator />
-
-          {/* Change Password */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Change Password</CardTitle>
-              <CardDescription>
-                Update your password to keep your account secure
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
               <Button 
                 onClick={() => setIsPasswordDialogOpen(true)}
                 variant="outline"
-                className="w-full sm:w-auto"
+                className="w-full justify-start"
               >
                 <Key className="h-4 w-4 mr-2" />
                 Change Password
               </Button>
-            </CardContent>
-          </Card>
-
-          <Separator />
-
-          {/* Logout */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Log Out</CardTitle>
-              <CardDescription>
-                Sign out of your account
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
               <Button 
                 onClick={onLogout}
                 variant="outline"
-                className="w-full sm:w-auto"
+                className="w-full justify-start"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Log Out
@@ -158,21 +172,16 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
             </CardContent>
           </Card>
 
-          <Separator />
-
-          {/* Delete Account */}
+          {/* Danger Zone - Compact */}
           <Card className="border-red-200">
             <CardHeader>
               <CardTitle className="text-red-600">Danger Zone</CardTitle>
-              <CardDescription>
-                Irreversible and destructive actions
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <Button 
                 onClick={() => setIsDeleteDialogOpen(true)}
                 variant="destructive"
-                className="w-full sm:w-auto"
+                className="w-full"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete Account
@@ -237,8 +246,7 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your account
-              and remove all your data from our servers.
+              This will move your account to deleted users. You can sign up again with the same email, but your data will be archived.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -4,9 +4,15 @@ import { mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 
 let mongoServer: MongoMemoryServer | null = null;
+let isConnected = false;
 
 export async function connectDB() {
   try {
+    // Return existing connection if already connected
+    if (isConnected && mongoose.connection.readyState === 1) {
+      return mongoose.connection;
+    }
+
     // Create mongodb-data directory if it doesn't exist
     const dbPath = './mongodb-data';
     if (!existsSync(dbPath)) {
@@ -27,6 +33,7 @@ export async function connectDB() {
     const uri = mongoServer.getUri();
     
     await mongoose.connect(uri);
+    isConnected = true;
     
     console.log('✅ MongoDB connected successfully!');
     console.log('📍 MongoDB URL: ' + uri);
@@ -39,12 +46,19 @@ export async function connectDB() {
   }
 }
 
+export async function ensureConnected() {
+  if (!isConnected || mongoose.connection.readyState !== 1) {
+    await connectDB();
+  }
+}
+
 export async function disconnectDB() {
   try {
     await mongoose.disconnect();
     if (mongoServer) {
       await mongoServer.stop();
     }
+    isConnected = false;
     console.log('👋 MongoDB disconnected');
   } catch (error) {
     console.error('Error disconnecting MongoDB:', error);

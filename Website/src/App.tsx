@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigation } from './components/Navigation';
 import { LandingPage } from './components/LandingPage';
 import { LoginPage } from './components/LoginPage';
@@ -16,6 +16,35 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
   const [userData, setUserData] = useState<any>(null);
+
+  // Load saved session on mount
+  useEffect(() => {
+    const savedSession = localStorage.getItem('userSession');
+    if (savedSession) {
+      try {
+        const session = JSON.parse(savedSession);
+        setUsername(session.username);
+        setUserData(session.userData);
+        setIsLoggedIn(true);
+        setCurrentPage(session.lastPage || 'board');
+      } catch (error) {
+        console.error('Failed to restore session:', error);
+        localStorage.removeItem('userSession');
+      }
+    }
+  }, []);
+
+  // Save session whenever it changes
+  useEffect(() => {
+    if (isLoggedIn && username) {
+      const session = {
+        username,
+        userData,
+        lastPage: currentPage,
+      };
+      localStorage.setItem('userSession', JSON.stringify(session));
+    }
+  }, [isLoggedIn, username, userData, currentPage]);
 
   const handleLogin = (user: string, data: any) => {
     setUsername(user);
@@ -36,6 +65,7 @@ export default function App() {
     setUserData(null);
     setIsLoggedIn(false);
     setCurrentPage('landing');
+    localStorage.removeItem('userSession');
   };
 
   const handleNavigate = (page: Page) => {
@@ -53,7 +83,7 @@ export default function App() {
       case 'board':
         return <BoardPage />;
       case 'sources':
-        return <SourcesPage />;
+        return <SourcesPage username={username} userId={userData?.id || ''} />;
       case 'settings':
         return <SettingsPage username={username} onLogout={handleLogout} />;
       default:

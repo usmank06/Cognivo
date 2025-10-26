@@ -1,282 +1,461 @@
-import { useState } from 'react';
-import { Database, Globe, Upload, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Upload, FileText, Trash2, Edit2, Check, X, Loader2, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
+import { Progress } from './ui/progress';
+import { toast } from 'sonner';
 
-interface Source {
+interface DataFile {
   id: string;
-  type: 'mongodb' | 'api' | 'file';
-  name: string;
-  connected: boolean;
-  details?: string;
+  originalFileName: string;
+  nickname?: string;
+  fileSize: number;
+  fileType: string;
+  uploadedAt: string;
+  status: 'uploading' | 'processing' | 'completed' | 'error';
+  processingStage?: string;
+  processingProgress?: number;
+  errorMessage?: string;
+  hasSchema: boolean;
+  subsetCount: number;
 }
 
-export function SourcesPage() {
-  const [sources, setSources] = useState<Source[]>([]);
-  const [isMongoDialogOpen, setIsMongoDialogOpen] = useState(false);
-  const [isApiDialogOpen, setIsApiDialogOpen] = useState(false);
-  const [mongoUri, setMongoUri] = useState('');
-  const [apiEndpoint, setApiEndpoint] = useState('');
-  const [apiKey, setApiKey] = useState('');
+interface SourcesPageProps {
+  username: string;
+  userId: string;
+}
 
-  const handleConnectMongo = () => {
-    if (mongoUri.trim()) {
-      setSources([...sources, {
-        id: Date.now().toString(),
-        type: 'mongodb',
-        name: 'MongoDB Connection',
-        connected: true,
-        details: mongoUri.split('@')[1] || 'Connected',
-      }]);
-      setMongoUri('');
-      setIsMongoDialogOpen(false);
+export function SourcesPage({ username, userId }: SourcesPageProps) {
+  const [files, setFiles] = useState<DataFile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [editingFileId, setEditingFileId] = useState<string | null>(null);
+  const [editNickname, setEditNickname] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<string | null>(null);
+
+  // Load files on mount
+  useEffect(() => {
+    loadFiles();
+  }, [username]);
+
+  // Poll for status updates of processing files
+  useEffect(() => {
+    const processingFiles = files.filter(f => 
+      f.status === 'uploading' || f.status === 'processing'
+    );
+
+    if (processingFiles.length === 0) return;
+
+    const interval = setInterval(() => {
+      loadFiles();
+    }, 2000); // Poll every 2 seconds
+
+    return () => clearInterval(interval);
+  }, [files]);
+
+  const loadFiles = async () => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/files/${username}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setFiles(data.files);
+      }
+    } catch (error) {
+      console.error('Failed to load files:', error);
+      toast.error('Failed to load files');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleConnectApi = () => {
-    if (apiEndpoint.trim()) {
-      setSources([...sources, {
-        id: Date.now().toString(),
-        type: 'api',
-        name: 'API Connection',
-        connected: true,
-        details: new URL(apiEndpoint).hostname,
-      }]);
-      setApiEndpoint('');
-      setApiKey('');
-      setIsApiDialogOpen(false);
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
+
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('username', username);
+      formData.append('userId', userId);
+
+      for (let i = 0; i < selectedFiles.length; i++) {
+        formData.append('files', selectedFiles[i]);
+      }
+
+      const response = await fetch('http://localhost:3001/api/files/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(`${selectedFiles.length} file(s) uploaded successfully!`);
+        loadFiles();
+      } else {
+        toast.error('Upload failed');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload files');
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSources([...sources, {
-        id: Date.now().toString(),
-        type: 'file',
-        name: file.name,
-        connected: true,
-        details: `${(file.size / 1024).toFixed(2)} KB`,
-      }]);
+  const handleUpdateNickname = async (fileId: string) => {
+    try {
+      const response = await fetch(
+        `http://localhost:3001/api/files/${username}/${fileId}/nickname`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nickname: editNickname }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Nickname updated!');
+        setEditingFileId(null);
+        loadFiles();
+      }
+    } catch (error) {
+      toast.error('Failed to update nickname');
     }
-    e.target.value = '';
   };
 
-  const handleDisconnect = (id: string) => {
-    setSources(sources.filter(s => s.id !== id));
+  const handleDeleteFile = async () => {
+    if (!fileToDelete) return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:3001/api/files/${username}/${fileToDelete}`,
+        { method: 'DELETE' }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('File deleted');
+        setFiles(files.filter(f => f.id !== fileToDelete));
+      }
+    } catch (error) {
+      toast.error('Failed to delete file');
+    } finally {
+      setDeleteDialogOpen(false);
+      setFileToDelete(null);
+    }
   };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const getStatusBadge = (file: DataFile) => {
+    switch (file.status) {
+      case 'completed':
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Completed
+          </Badge>
+        );
+      case 'processing':
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            Processing
+          </Badge>
+        );
+      case 'uploading':
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            <Clock className="h-3 w-3 mr-1" />
+            Uploading
+          </Badge>
+        );
+      case 'error':
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Error
+          </Badge>
+        );
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="pt-16 min-h-screen bg-muted/20 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="pt-16 min-h-screen bg-muted/20">
       <div className="max-w-6xl mx-auto px-6 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl mb-2">Data Sources</h1>
-          <p className="text-muted-foreground">
-            Connect your data sources to power your boards
-          </p>
-        </div>
-
-        {/* Connection Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                <Database className="h-6 w-6 text-green-600" />
-              </div>
-              <CardTitle>MongoDB</CardTitle>
-              <CardDescription>
-                Connect to your MongoDB database
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                onClick={() => setIsMongoDialogOpen(true)}
-                className="w-full"
-              >
-                Connect MongoDB
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                <Globe className="h-6 w-6 text-blue-600" />
-              </div>
-              <CardTitle>REST API</CardTitle>
-              <CardDescription>
-                Connect to any REST API endpoint
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                onClick={() => setIsApiDialogOpen(true)}
-                className="w-full"
-              >
-                Connect API
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-                <Upload className="h-6 w-6 text-purple-600" />
-              </div>
-              <CardTitle>Upload File</CardTitle>
-              <CardDescription>
-                Upload CSV, Excel, or PDF files
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <label htmlFor="file-upload">
-                <Button 
-                  className="w-full"
-                  onClick={() => document.getElementById('file-upload')?.click()}
-                  type="button"
-                >
-                  Upload File
-                </Button>
-              </label>
-              <input
-                id="file-upload"
-                type="file"
-                accept=".csv,.xlsx,.xls,.pdf"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Connected Sources */}
-        {sources.length > 0 && (
+        {/* Header */}
+        <div className="mb-8 flex items-center justify-between">
           <div>
-            <h2 className="text-xl mb-4">Connected Sources</h2>
-            <div className="space-y-3">
-              {sources.map((source) => (
-                <Card key={source.id}>
-                  <CardContent className="flex items-center justify-between p-6">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center
-                        ${source.type === 'mongodb' ? 'bg-green-100' : ''}
-                        ${source.type === 'api' ? 'bg-blue-100' : ''}
-                        ${source.type === 'file' ? 'bg-purple-100' : ''}
-                      `}>
-                        {source.type === 'mongodb' && <Database className="h-5 w-5 text-green-600" />}
-                        {source.type === 'api' && <Globe className="h-5 w-5 text-blue-600" />}
-                        {source.type === 'file' && <Upload className="h-5 w-5 text-purple-600" />}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3>{source.name}</h3>
-                          <Badge variant="outline" className="text-xs">
-                            <CheckCircle2 className="h-3 w-3 mr-1 text-green-600" />
-                            Connected
-                          </Badge>
-                        </div>
-                        {source.details && (
-                          <p className="text-sm text-muted-foreground">{source.details}</p>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleDisconnect(source.id)}
-                    >
-                      Disconnect
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <h1 className="text-3xl mb-2">Data Files</h1>
+            <p className="text-muted-foreground">
+              Upload and manage your data files
+            </p>
+          </div>
+          
+          <label htmlFor="file-upload">
+            <Button 
+              disabled={isUploading}
+              onClick={() => document.getElementById('file-upload')?.click()}
+              type="button"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Files
+                </>
+              )}
+            </Button>
+          </label>
+          <input
+            id="file-upload"
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            multiple
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+        </div>
+
+        {/* Stats */}
+        {files.length > 0 && (
+          <div className="grid grid-cols-4 gap-4 mb-8">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold">{files.length}</div>
+                <div className="text-sm text-muted-foreground">Total Files</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold">
+                  {files.filter(f => f.status === 'completed').length}
+                </div>
+                <div className="text-sm text-muted-foreground">Completed</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold">
+                  {files.filter(f => f.status === 'processing').length}
+                </div>
+                <div className="text-sm text-muted-foreground">Processing</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold">
+                  {formatFileSize(files.reduce((sum, f) => sum + f.fileSize, 0))}
+                </div>
+                <div className="text-sm text-muted-foreground">Total Size</div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
-        {sources.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <p>No sources connected yet. Connect a source above to get started.</p>
+        {/* Files List */}
+        {files.length === 0 ? (
+          <Card className="p-12">
+            <div className="text-center pt-6 pb-6">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-6" />
+              <h3 className="text-lg font-medium mb-2">No files uploaded yet</h3>
+              <p className="text-muted-foreground mb-6">
+                Upload your first CSV or Excel file to get started
+              </p>
+              <label htmlFor="file-upload-empty">
+                <Button onClick={() => document.getElementById('file-upload-empty')?.click()}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Files
+                </Button>
+              </label>
+              <input
+                id="file-upload-empty"
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                multiple
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </div>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {files.map((file) => (
+              <Card key={file.id}>
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        {/* File name/nickname */}
+                        <div className="flex items-center gap-2 mb-1">
+                          {editingFileId === file.id ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={editNickname}
+                                onChange={(e) => setEditNickname(e.target.value)}
+                                placeholder="Enter nickname"
+                                className="h-8 w-64"
+                              />
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleUpdateNickname(file.id)}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setEditingFileId(null)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <h3 className="font-medium truncate">
+                                {file.nickname || file.originalFileName}
+                              </h3>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => {
+                                  setEditingFileId(file.id);
+                                  setEditNickname(file.nickname || '');
+                                }}
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                          {getStatusBadge(file)}
+                        </div>
+
+                        {file.nickname && (
+                          <div className="text-sm text-muted-foreground mb-2">
+                            {file.originalFileName}
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>{formatFileSize(file.fileSize)}</span>
+                          <span>•</span>
+                          <span>{formatDate(file.uploadedAt)}</span>
+                          {file.status === 'completed' && (
+                            <>
+                              <span>•</span>
+                              <span>{file.subsetCount} subsets</span>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Processing progress */}
+                        {(file.status === 'processing' || file.status === 'uploading') && (
+                          <div className="mt-3 space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">
+                                {file.processingStage || 'Processing...'}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {file.processingProgress}%
+                              </span>
+                            </div>
+                            <Progress value={file.processingProgress || 0} />
+                          </div>
+                        )}
+
+                        {/* Error message */}
+                        {file.status === 'error' && file.errorMessage && (
+                          <div className="mt-2 text-sm text-red-600">
+                            {file.errorMessage}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => {
+                        setFileToDelete(file.id);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
       </div>
 
-      {/* MongoDB Dialog */}
-      <Dialog open={isMongoDialogOpen} onOpenChange={setIsMongoDialogOpen}>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Connect to MongoDB</DialogTitle>
+            <DialogTitle>Delete File</DialogTitle>
             <DialogDescription>
-              Enter your MongoDB connection string
+              Are you sure you want to delete this file? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="mongo-uri">Connection URI</Label>
-              <Input
-                id="mongo-uri"
-                placeholder="mongodb://username:password@host:port/database"
-                value={mongoUri}
-                onChange={(e) => setMongoUri(e.target.value)}
-              />
-              <p className="text-xs text-gray-500">
-                Note: This is a demo. Connection details are stored locally only.
-              </p>
-            </div>
-          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsMongoDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleConnectMongo}>
-              Connect
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* API Dialog */}
-      <Dialog open={isApiDialogOpen} onOpenChange={setIsApiDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Connect to API</DialogTitle>
-            <DialogDescription>
-              Enter your API endpoint and credentials
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="api-endpoint">API Endpoint</Label>
-              <Input
-                id="api-endpoint"
-                placeholder="https://api.example.com/v1"
-                value={apiEndpoint}
-                onChange={(e) => setApiEndpoint(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="api-key">API Key (Optional)</Label>
-              <Input
-                id="api-key"
-                type="password"
-                placeholder="your-api-key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-              <p className="text-xs text-gray-500">
-                Note: This is a demo. API keys are stored locally only.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsApiDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConnectApi}>
-              Connect
+            <Button variant="destructive" onClick={handleDeleteFile}>
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

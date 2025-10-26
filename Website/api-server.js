@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import multer from 'multer';
 import { connectDB } from './src/db/mongodb.ts';
 import { 
   registerUser, 
@@ -9,9 +10,26 @@ import {
   deleteUserAccount,
   updateTokenUsage 
 } from './src/db/auth.ts';
+import {
+  uploadFile,
+  getUserFiles,
+  getFileDetails,
+  updateFileNickname,
+  deleteFile,
+  getFileStatus,
+  getUserFileStats,
+} from './src/db/fileManager.ts';
 
 const app = express();
 const PORT = 3001;
+
+// File upload configuration
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+});
 
 // Middleware
 app.use(cors());
@@ -76,6 +94,107 @@ app.post('/api/user/track-tokens', async (req, res) => {
   try {
     const { username, tokens, cost } = req.body;
     const result = await updateTokenUsage(username, tokens, cost);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// ============================================
+// File Management Routes
+// ============================================
+
+// Upload file(s)
+app.post('/api/files/upload', upload.array('files', 10), async (req, res) => {
+  try {
+    const { username, userId } = req.body;
+    
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, error: 'No files uploaded' });
+    }
+    
+    const results = [];
+    
+    for (const file of req.files) {
+      const result = await uploadFile(
+        username,
+        userId,
+        file.originalname,
+        file.buffer,
+        file.size,
+        file.mimetype
+      );
+      results.push(result);
+    }
+    
+    res.json({ success: true, results });
+  } catch (error) {
+    console.error('File upload error:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Get all files for a user
+app.get('/api/files/:username', async (req, res) => {
+  try {
+    const { username } = req.params;
+    const result = await getUserFiles(username);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Get file details
+app.get('/api/files/:username/:fileId', async (req, res) => {
+  try {
+    const { username, fileId } = req.params;
+    const result = await getFileDetails(fileId, username);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Update file nickname
+app.patch('/api/files/:username/:fileId/nickname', async (req, res) => {
+  try {
+    const { username, fileId } = req.params;
+    const { nickname } = req.body;
+    const result = await updateFileNickname(fileId, username, nickname);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Delete file
+app.delete('/api/files/:username/:fileId', async (req, res) => {
+  try {
+    const { username, fileId } = req.params;
+    const result = await deleteFile(fileId, username);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Get file status
+app.get('/api/files/:username/:fileId/status', async (req, res) => {
+  try {
+    const { username, fileId } = req.params;
+    const result = await getFileStatus(fileId, username);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Get user file statistics
+app.get('/api/files/:username/stats/summary', async (req, res) => {
+  try {
+    const { username } = req.params;
+    const result = await getUserFileStats(username);
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });

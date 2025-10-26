@@ -1439,53 +1439,156 @@ function GraphCore() {
   }
 
   // Export as PNG
-  const onExportImage = () => {
-    const viewportElement = document.querySelector('.react-flow__viewport') as HTMLElement
-    if (!viewportElement) return
+  const onExportImage = async () => {
+    if (nodes.length === 0) {
+      alert('No content to export')
+      return
+    }
 
-    toPng(viewportElement, {
-      backgroundColor: '#ffffff',
-      width: viewportElement.offsetWidth,
-      height: viewportElement.offsetHeight,
-    })
-      .then((dataUrl) => {
-        const a = document.createElement('a')
-        a.href = dataUrl
-        a.download = 'graph.png'
-        a.click()
-      })
-      .catch((err) => {
-        console.error('Failed to export image:', err)
-        alert('Failed to export image')
-      })
-  }
-
-  // Export as PDF
-  const onExportPDF = async () => {
     const viewportElement = document.querySelector('.react-flow__viewport') as HTMLElement
     if (!viewportElement) return
 
     try {
+      // Get bounds of all nodes
+      const nodeBounds = getNodesBounds(nodes as any)
+      const padding = 20
+      
+      // Calculate the actual content area
+      const contentWidth = nodeBounds.width + padding * 2
+      const contentHeight = nodeBounds.height + padding * 2
+      
+      // Get current viewport
+      const viewport = getViewport?.()
+      if (!viewport) return
+
+      // Calculate transform to show just the content
+      const transform = getViewportForBounds(
+        nodeBounds,
+        contentWidth,
+        contentHeight,
+        0.5,
+        2,
+        padding / contentWidth
+      )
+
+      // Temporarily apply transform to capture content
+      const originalTransform = viewportElement.style.transform
+      viewportElement.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`
+      
+      // Wait a tick for render
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Capture the content area
       const dataUrl = await toPng(viewportElement, {
         backgroundColor: '#ffffff',
-        width: viewportElement.offsetWidth,
-        height: viewportElement.offsetHeight,
+        width: contentWidth,
+        height: contentHeight,
+        style: {
+          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`
+        }
       })
 
-      // Dynamically import jsPDF to avoid bundling issues
+      // Restore original transform
+      viewportElement.style.transform = originalTransform
+
+      const a = document.createElement('a')
+      a.href = dataUrl
+      a.download = 'graph.png'
+      a.click()
+    } catch (err) {
+      console.error('Failed to export image:', err)
+      alert('Failed to export image')
+    }
+  }
+
+  // Export as PDF
+  const onExportPDF = async () => {
+    if (nodes.length === 0) {
+      alert('No content to export')
+      return
+    }
+
+    try {
+      // Get bounds of all nodes
+      const nodeBounds = getNodesBounds(nodes as any)
+      const padding = 20
+      
+      // Calculate the actual content area
+      const contentWidth = nodeBounds.width + padding * 2
+      const contentHeight = nodeBounds.height + padding * 2
+      
+      // Create a temporary container to render just the content
+      const viewportElement = document.querySelector('.react-flow__viewport') as HTMLElement
+      if (!viewportElement) return
+      
+      // Get current viewport
+      const viewport = getViewport?.()
+      if (!viewport) return
+
+      // Calculate transform to show just the content
+      const transform = getViewportForBounds(
+        nodeBounds,
+        contentWidth,
+        contentHeight,
+        0.5,
+        2,
+        padding / contentWidth
+      )
+
+      // Temporarily apply transform to capture content
+      const originalTransform = viewportElement.style.transform
+      viewportElement.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`
+      
+      // Wait a tick for render
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Capture the content area
+      const dataUrl = await toPng(viewportElement, {
+        backgroundColor: '#ffffff',
+        width: contentWidth,
+        height: contentHeight,
+        style: {
+          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`
+        }
+      })
+
+      // Restore original transform
+      viewportElement.style.transform = originalTransform
+
+      // Dynamically import jsPDF
       const { jsPDF } = await import('jspdf')
+      
+      // Letter size in points (72 points = 1 inch)
+      const pageWidth = 8.5 * 72  // 612 points
+      const pageHeight = 11 * 72   // 792 points
       
       const img = new Image()
       img.src = dataUrl
       img.onload = () => {
-        const imgWidth = img.width
-        const imgHeight = img.height
+        const imgWidth = contentWidth
+        const imgHeight = contentHeight
         
-        // Create PDF in landscape or portrait based on image dimensions
-        const orientation = imgWidth > imgHeight ? 'landscape' : 'portrait'
-        const pdf = new jsPDF(orientation, 'px', [imgWidth, imgHeight])
+        // Calculate scaling to fit content to letter size page with margins
+        const margin = 36 // 0.5 inch margins
+        const availableWidth = pageWidth - (2 * margin)
+        const availableHeight = pageHeight - (2 * margin)
         
-        pdf.addImage(dataUrl, 'PNG', 0, 0, imgWidth, imgHeight)
+        // Scale to fit within available space
+        const scale = Math.min(
+          availableWidth / imgWidth,
+          availableHeight / imgHeight
+        )
+        
+        const scaledWidth = imgWidth * scale
+        const scaledHeight = imgHeight * scale
+        
+        // Center on page
+        const x = (pageWidth - scaledWidth) / 2
+        const y = (pageHeight - scaledHeight) / 2
+        
+        // Create letter-sized PDF
+        const pdf = new jsPDF('portrait', 'pt', 'letter')
+        pdf.addImage(dataUrl, 'PNG', x, y, scaledWidth, scaledHeight)
         pdf.save('graph.pdf')
       }
     } catch (err) {

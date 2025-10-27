@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Save, Download, RefreshCw } from 'lucide-react';
+import { Save, Download, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
@@ -17,6 +17,7 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isTopBarCollapsed, setIsTopBarCollapsed] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update local script when canvas changes
@@ -132,58 +133,110 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Top Controls */}
-      <div className="flex items-center justify-between px-6 py-4 bg-card border-b border-border">
-        <div className="flex items-center gap-4">
-          <div>
-            <h2 className="text-lg font-semibold">{canvas.name}</h2>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-              {isSaving ? (
-                <>
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <span>Last saved: {formatLastSaved()}</span>
-                  {hasUnsavedChanges && (
-                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 ml-2">
-                      Unsaved changes
-                    </Badge>
-                  )}
-                </>
-              )}
+      {/* Collapsible Top Controls */}
+      {!isTopBarCollapsed ? (
+        <div className="flex items-center justify-between px-6 py-4 bg-card border-b border-border">
+          <div className="flex items-center gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">{canvas.name}</h2>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                {isSaving ? (
+                  <>
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Last saved: {formatLastSaved()}</span>
+                    {hasUnsavedChanges && (
+                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 ml-2">
+                        Unsaved changes
+                      </Badge>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={formatScript}
-          >
-            Format JSON
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleManualSave}
-            disabled={isSaving || !hasUnsavedChanges}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Save Now
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleExport}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsTopBarCollapsed(true)}
+              title="Collapse toolbar"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={formatScript}
+            >
+              Format JSON
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleManualSave}
+              disabled={isSaving || !hasUnsavedChanges}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save Now
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleExport}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : (
+        // Collapsed state - minimal bar
+        <div className="flex items-center justify-between px-4 py-2 bg-card border-b border-border">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{canvas.name}</span>
+            {isSaving && (
+              <>
+                <span>•</span>
+                <RefreshCw className="h-3 w-3 animate-spin" />
+                <span>Saving...</span>
+              </>
+            )}
+            {!isSaving && hasUnsavedChanges && (
+              <>
+                <span>•</span>
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                  Unsaved
+                </Badge>
+              </>
+            )}
+          </div>
+          
+          <div className="flex gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleManualSave}
+              disabled={isSaving || !hasUnsavedChanges}
+              title="Save now"
+            >
+              <Save className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsTopBarCollapsed(false)}
+              title="Expand toolbar"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Script Editor */}
       <div className="flex-1 overflow-hidden p-6">

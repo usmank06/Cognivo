@@ -1,39 +1,147 @@
-import { useState } from 'react';
-import { ChevronRight, ChevronLeft, Plus, MessageSquare } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronRight, ChevronLeft, Plus, MessageSquare, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ScrollArea } from '../ui/scroll-area';
 import { Input } from '../ui/input';
+import { Badge } from '../ui/badge';
+import { toast } from 'sonner';
+import type { Canvas } from '../BoardPage';
 
 interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'bot';
+  role: 'user' | 'assistant';
+  content: string;
   timestamp: Date;
 }
 
-export function ChatSidebar() {
+interface Chat {
+  id: string;
+  messages: Message[];
+  createdAt: Date;
+}
+
+interface ChatSidebarProps {
+  currentCanvas: Canvas | null;
+  username: string;
+  onReloadCanvas: () => void;
+}
+
+export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [currentChat, setCurrentChat] = useState('chat-1');
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '1', text: 'Hello! How can I help you with your board today?', sender: 'bot', timestamp: new Date() },
-    { id: '2', text: 'Can you show me data from @dataset1?', sender: 'user', timestamp: new Date() },
-    { id: '3', text: 'Sure! I can help you visualize data from dataset1. What would you like to see?', sender: 'bot', timestamp: new Date() },
-  ]);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-    
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: inputValue,
-      sender: 'user',
-      timestamp: new Date(),
-    };
-    setMessages([...messages, newMessage]);
-    setInputValue('');
+  // Load chats when canvas changes
+  useEffect(() => {
+    if (currentCanvas && currentCanvas.chats) {
+      setChats(currentCanvas.chats);
+      // Select the most recent chat
+      if (currentCanvas.chats.length > 0) {
+        setCurrentChatId(currentCanvas.chats[currentCanvas.chats.length - 1].id);
+      } else {
+        setCurrentChatId(null);
+      }
+    } else {
+      setChats([]);
+      setCurrentChatId(null);
+    }
+  }, [currentCanvas?.id]);
+
+  const getCurrentChat = () => {
+    return chats.find(c => c.id === currentChatId);
   };
+
+  const handleCreateNewChat = async () => {
+    if (!currentCanvas) return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/chat`,
+        { method: 'POST' }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        const newChat: Chat = {
+          id: data.chatId,
+          messages: [],
+          createdAt: new Date(),
+        };
+        setChats([...chats, newChat]);
+        setCurrentChatId(data.chatId);
+        toast.success('New chat created!');
+      }
+    } catch (error) {
+      console.error('Create chat error:', error);
+      toast.error('Failed to create chat');
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || !currentCanvas || !currentChatId) return;
+    
+    try {
+      // Add user message
+      const response = await fetch(
+        `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/chat/${currentChatId}/message`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: 'user', content: inputValue }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update local state
+        const updatedChats = chats.map(chat => {
+          if (chat.id === currentChatId) {
+            return {
+              ...chat,
+              messages: [...chat.messages, {
+                role: 'user' as const,
+                content: inputValue,
+                timestamp: new Date(),
+              }],
+            };
+          }
+          return chat;
+        });
+        setChats(updatedChats);
+        setInputValue('');
+
+        // TODO: Here you would call your AI/chat API
+        // For now, just add a placeholder response
+        // In the future, this is where chat would analyze and modify the canvas
+      }
+    } catch (error) {
+      console.error('Send message error:', error);
+      toast.error('Failed to send message');
+    }
+  };
+
+  const formatChatTime = (date: Date) => {
+    const d = new Date(date);
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  if (!currentCanvas) {
+    return (
+      <div className="w-12 bg-card border-r border-border flex items-center justify-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-12 w-12 p-0"
+          disabled
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -51,7 +159,7 @@ export function ChatSidebar() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <MessageSquare className="h-5 w-5 text-primary" />
-                    <span className="text-sm">Chat</span>
+                    <span className="text-sm font-medium">Chat</span>
                   </div>
                   <Button
                     variant="ghost"
@@ -62,19 +170,29 @@ export function ChatSidebar() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                 </div>
-                <Select value={currentChat} onValueChange={setCurrentChat}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="chat-1">Chat 1</SelectItem>
-                    <SelectItem value="chat-2">Chat 2</SelectItem>
-                  </SelectContent>
-                </Select>
+                
+                {chats.length > 0 && (
+                  <Select 
+                    value={currentChatId || undefined} 
+                    onValueChange={setCurrentChatId}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a chat" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {chats.map((chat, index) => (
+                        <SelectItem key={chat.id} value={chat.id}>
+                          Chat {index + 1} ({chat.messages.length} msgs)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                
                 <Button 
                   variant="outline" 
                   className="w-full"
-                  onClick={() => setMessages([])}
+                  onClick={handleCreateNewChat}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   New Chat
@@ -82,25 +200,38 @@ export function ChatSidebar() {
               </div>
               
               <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
+                {currentChatId && getCurrentChat() ? (
+                  <div className="space-y-4">
+                    {getCurrentChat()!.messages.map((message, index) => (
                       <div
-                        className={`
-                          max-w-[80%] rounded-lg px-4 py-2
-                          ${message.sender === 'user' 
-                            ? 'bg-primary text-white' 
-                            : 'bg-muted text-foreground'}
-                        `}
+                        key={index}
+                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
-                        <p className="text-sm">{message.text}</p>
+                        <div
+                          className={`
+                            max-w-[80%] rounded-lg px-4 py-2
+                            ${message.role === 'user' 
+                              ? 'bg-primary text-white' 
+                              : 'bg-muted text-foreground'}
+                          `}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          <span className="text-xs opacity-70 mt-1 block">
+                            {formatChatTime(message.timestamp)}
+                          </span>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center text-muted-foreground">
+                      <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No chat selected</p>
+                      <p className="text-xs mt-1">Create a new chat to get started</p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </ScrollArea>
 
               <div className="p-4 border-t border-border">
@@ -110,11 +241,20 @@ export function ChatSidebar() {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    disabled={!currentChatId}
                   />
-                  <Button onClick={handleSendMessage}>
+                  <Button 
+                    onClick={handleSendMessage}
+                    disabled={!currentChatId || !inputValue.trim()}
+                  >
                     Send
                   </Button>
                 </div>
+                {!currentChatId && (
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    Create a chat first
+                  </p>
+                )}
               </div>
             </>
           ) : (

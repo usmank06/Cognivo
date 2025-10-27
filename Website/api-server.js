@@ -19,6 +19,18 @@ import {
   getFileStatus,
   getUserFileStats,
 } from './src/db/fileManager.ts';
+import {
+  createCanvas,
+  getUserCanvases,
+  getCanvas,
+  updateCanvasScript,
+  updateCanvasName,
+  updateCanvasThumbnail,
+  addChatToCanvas,
+  addMessageToChat,
+  deleteCanvas,
+  getCanvasStats,
+} from './src/db/canvasManager.ts';
 
 const app = express();
 const PORT = 3001;
@@ -94,6 +106,124 @@ app.post('/api/user/track-tokens', async (req, res) => {
   try {
     const { username, tokens, cost } = req.body;
     const result = await updateTokenUsage(username, tokens, cost);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// ============================================
+// Canvas Management Routes
+// ============================================
+
+// Create a new canvas
+app.post('/api/canvas/create', async (req, res) => {
+  try {
+    const { username, userId, name, initialScript } = req.body;
+    const result = await createCanvas(username, userId, name, initialScript);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Get all canvases for a user
+app.get('/api/canvas/:username', async (req, res) => {
+  try {
+    const { username } = req.params;
+    const result = await getUserCanvases(username);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Get a specific canvas
+app.get('/api/canvas/:username/:canvasId', async (req, res) => {
+  try {
+    const { username, canvasId } = req.params;
+    const result = await getCanvas(canvasId, username);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Update canvas script (auto-save)
+app.patch('/api/canvas/:username/:canvasId/script', async (req, res) => {
+  try {
+    const { username, canvasId } = req.params;
+    const { script } = req.body;
+    const result = await updateCanvasScript(canvasId, username, script);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Update canvas name
+app.patch('/api/canvas/:username/:canvasId/name', async (req, res) => {
+  try {
+    const { username, canvasId } = req.params;
+    const { name } = req.body;
+    const result = await updateCanvasName(canvasId, username, name);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Update canvas thumbnail
+app.patch('/api/canvas/:username/:canvasId/thumbnail', async (req, res) => {
+  try {
+    const { username, canvasId } = req.params;
+    const { thumbnail } = req.body;
+    const result = await updateCanvasThumbnail(canvasId, username, thumbnail);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Add a new chat to canvas
+app.post('/api/canvas/:username/:canvasId/chat', async (req, res) => {
+  try {
+    const { username, canvasId } = req.params;
+    const result = await addChatToCanvas(canvasId, username);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Add message to a chat
+app.post('/api/canvas/:username/:canvasId/chat/:chatId/message', async (req, res) => {
+  try {
+    const { username, canvasId, chatId } = req.params;
+    const { role, content } = req.body;
+    const result = await addMessageToChat(canvasId, username, chatId, role, content);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Delete canvas
+app.delete('/api/canvas/:username/:canvasId', async (req, res) => {
+  try {
+    const { username, canvasId } = req.params;
+    const result = await deleteCanvas(canvasId, username);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Get canvas statistics
+app.get('/api/canvas/:username/stats/summary', async (req, res) => {
+  try {
+    const { username } = req.params;
+    const result = await getCanvasStats(username);
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });

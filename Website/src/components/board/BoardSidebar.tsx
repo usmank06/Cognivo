@@ -1,65 +1,63 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, LayoutGrid, Edit2, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, LayoutGrid, Edit2, Trash2, FileText } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ScrollArea } from '../ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Badge } from '../ui/badge';
-import type { Board, BoardType } from '../BoardPage';
+import type { Canvas } from '../BoardPage';
 
 interface BoardSidebarProps {
-  boards: Board[];
-  currentBoard: Board;
-  onSelectBoard: (board: Board) => void;
-  onCreateBoard: (name: string, type: BoardType) => void;
-  onEditBoard: (id: string, name: string) => void;
-  onDeleteBoard: (id: string) => void;
+  canvases: Canvas[];
+  currentCanvas: Canvas | null;
+  onSelectCanvas: (canvas: Canvas) => void;
+  onCreateCanvas: (name: string) => void;
+  onRenameCanvas: (id: string, name: string) => void;
+  onDeleteCanvas: (id: string) => void;
 }
 
 export function BoardSidebar({ 
-  boards, 
-  currentBoard, 
-  onSelectBoard, 
-  onCreateBoard,
-  onEditBoard,
-  onDeleteBoard 
+  canvases, 
+  currentCanvas, 
+  onSelectCanvas, 
+  onCreateCanvas,
+  onRenameCanvas,
+  onDeleteCanvas 
 }: BoardSidebarProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editingBoard, setEditingBoard] = useState<Board | null>(null);
-  const [newBoardName, setNewBoardName] = useState('');
-  const [newBoardType, setNewBoardType] = useState<BoardType>('canvas');
-  const [editBoardName, setEditBoardName] = useState('');
+  const [editingCanvas, setEditingCanvas] = useState<Canvas | null>(null);
+  const [newCanvasName, setNewCanvasName] = useState('');
+  const [editCanvasName, setEditCanvasName] = useState('');
 
-  const handleCreateBoard = () => {
-    if (newBoardName.trim()) {
-      onCreateBoard(newBoardName, newBoardType);
-      setNewBoardName('');
-      setNewBoardType('canvas');
+  const handleCreateCanvas = () => {
+    if (newCanvasName.trim()) {
+      onCreateCanvas(newCanvasName);
+      setNewCanvasName('');
       setIsCreateOpen(false);
     }
   };
 
-  const handleEditBoard = () => {
-    if (editingBoard && editBoardName.trim()) {
-      onEditBoard(editingBoard.id, editBoardName);
-      setEditBoardName('');
-      setEditingBoard(null);
+  const handleEditCanvas = () => {
+    if (editingCanvas && editCanvasName.trim()) {
+      onRenameCanvas(editingCanvas.id, editCanvasName);
+      setEditCanvasName('');
+      setEditingCanvas(null);
       setIsEditOpen(false);
     }
   };
 
   const formatDate = (date: Date) => {
+    const d = new Date(date);
     return new Intl.DateTimeFormat('en-US', { 
       month: 'short', 
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
-    }).format(date);
+    }).format(d);
   };
 
   return (
@@ -78,7 +76,7 @@ export function BoardSidebar({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <LayoutGrid className="h-5 w-5 text-primary" />
-                    <span className="text-sm">Boards</span>
+                    <span className="text-sm font-medium">Canvases</span>
                   </div>
                   <Button
                     variant="ghost"
@@ -89,68 +87,62 @@ export function BoardSidebar({
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
-                <Select 
-                  value={currentBoard.id} 
-                  onValueChange={(id) => {
-                    const board = boards.find(b => b.id === id);
-                    if (board) onSelectBoard(board);
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {boards.map((board) => (
-                      <SelectItem key={board.id} value={board.id}>
-                        {board.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                
+                {currentCanvas && canvases.length > 0 && (
+                  <Select 
+                    value={currentCanvas.id} 
+                    onValueChange={(id) => {
+                      const canvas = canvases.find(c => c.id === id);
+                      if (canvas) onSelectCanvas(canvas);
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {canvases.map((canvas) => (
+                        <SelectItem key={canvas.id} value={canvas.id}>
+                          {canvas.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full">
                       <Plus className="h-4 w-4 mr-2" />
-                      New Board
+                      New Canvas
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Create New Board</DialogTitle>
+                      <DialogTitle>Create New Canvas</DialogTitle>
                       <DialogDescription>
-                        Choose a name and type for your new board
+                        Choose a name for your new canvas
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
-                        <Label htmlFor="board-name">Board Name</Label>
+                        <Label htmlFor="canvas-name">Canvas Name</Label>
                         <Input
-                          id="board-name"
-                          placeholder="Enter board name"
-                          value={newBoardName}
-                          onChange={(e) => setNewBoardName(e.target.value)}
+                          id="canvas-name"
+                          placeholder="Enter canvas name"
+                          value={newCanvasName}
+                          onChange={(e) => setNewCanvasName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleCreateCanvas();
+                          }}
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Board Type</Label>
-                        <RadioGroup value={newBoardType} onValueChange={(v) => setNewBoardType(v as BoardType)}>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="canvas" id="canvas" />
-                            <Label htmlFor="canvas">Infinite Canvas</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="pdf" id="pdf" />
-                            <Label htmlFor="pdf">PDF Report</Label>
-                          </div>
-                        </RadioGroup>
                       </div>
                     </div>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
                         Cancel
                       </Button>
-                      <Button onClick={handleCreateBoard}>
-                        Create Board
+                      <Button onClick={handleCreateCanvas}>
+                        Create Canvas
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -159,55 +151,75 @@ export function BoardSidebar({
               
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-3">
-                  {boards.map((board) => (
+                  {canvases.map((canvas) => (
                     <div
-                      key={board.id}
+                      key={canvas.id}
                       className={`
-                        p-4 rounded-lg border transition-colors cursor-pointer
-                        ${currentBoard.id === board.id 
+                        rounded-lg border transition-colors cursor-pointer overflow-hidden
+                        ${currentCanvas?.id === canvas.id 
                           ? 'border-primary bg-primary/5' 
                           : 'border-border hover:border-primary/50 hover:bg-muted/50'}
                       `}
-                      onClick={() => onSelectBoard(board)}
+                      onClick={() => onSelectCanvas(canvas)}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="text-sm">{board.name}</h4>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingBoard(board);
-                              setEditBoardName(board.name);
-                              setIsEditOpen(true);
-                            }}
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-destructive hover:text-destructive/80"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (boards.length > 1) {
-                                onDeleteBoard(board.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
+                      {/* Thumbnail */}
+                      <div className="w-full h-32 bg-slate-900 flex items-center justify-center border-b border-border">
+                        {canvas.thumbnail ? (
+                          <img 
+                            src={canvas.thumbnail} 
+                            alt={canvas.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 text-slate-500">
+                            <FileText className="h-8 w-8" />
+                            <span className="text-xs">No preview</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="text-xs">
-                          {board.type === 'canvas' ? 'Canvas' : 'PDF'}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(board.lastEdited)}
-                        </span>
+                      
+                      {/* Canvas Info */}
+                      <div className="p-3">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="text-sm font-medium truncate pr-2">{canvas.name}</h4>
+                          <div className="flex gap-1 flex-shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingCanvas(canvas);
+                                setEditCanvasName(canvas.name);
+                                setIsEditOpen(true);
+                              }}
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive/80"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (canvases.length > 1 || window.confirm('Delete this canvas?')) {
+                                  onDeleteCanvas(canvas.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs">
+                          <Badge variant="outline" className="text-xs">
+                            {canvas.chatCount || 0} chats
+                          </Badge>
+                          <span className="text-muted-foreground">
+                            {formatDate(canvas.updatedAt)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -232,19 +244,22 @@ export function BoardSidebar({
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Board</DialogTitle>
+            <DialogTitle>Rename Canvas</DialogTitle>
             <DialogDescription>
-              Update your board details
+              Update your canvas name
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-board-name">Board Name</Label>
+              <Label htmlFor="edit-canvas-name">Canvas Name</Label>
               <Input
-                id="edit-board-name"
-                placeholder="Enter board name"
-                value={editBoardName}
-                onChange={(e) => setEditBoardName(e.target.value)}
+                id="edit-canvas-name"
+                placeholder="Enter canvas name"
+                value={editCanvasName}
+                onChange={(e) => setEditCanvasName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleEditCanvas();
+                }}
               />
             </div>
           </div>
@@ -252,7 +267,7 @@ export function BoardSidebar({
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEditBoard}>
+            <Button onClick={handleEditCanvas}>
               Save Changes
             </Button>
           </DialogFooter>

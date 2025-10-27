@@ -81,7 +81,7 @@ export default function App() {
       case 'register':
         return <RegisterPage onRegister={handleRegister} onNavigate={handleNavigate} />;
       case 'board':
-        return <BoardPage />;
+        return <BoardPage username={username} userId={userData?.id || ''} />;
       case 'sources':
         return <SourcesPage username={username} userId={userData?.id || ''} />;
       case 'settings':

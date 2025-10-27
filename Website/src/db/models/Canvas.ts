@@ -1,0 +1,153 @@
+import mongoose, { Schema, Document } from 'mongoose';
+
+// Chat message within a chat thread
+export interface IChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
+
+// Chat thread for a canvas
+export interface IChat {
+  id: string;
+  messages: IChatMessage[];
+  createdAt: Date;
+}
+
+// Main canvas document
+export interface ICanvas extends Document {
+  userId: string;
+  username: string;
+  name: string;
+  script: string; // JSON string of nodes and edges
+  thumbnail?: string; // Base64 image or URL
+  createdAt: Date;
+  updatedAt: Date;
+  lastAccessedAt: Date;
+  chats: IChat[];
+}
+
+const ChatMessageSchema = new Schema({
+  role: {
+    type: String,
+    enum: ['user', 'assistant'],
+    required: true,
+  },
+  content: {
+    type: String,
+    required: true,
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now,
+  },
+}, { _id: false });
+
+const ChatSchema = new Schema({
+  id: {
+    type: String,
+    required: true,
+  },
+  messages: [ChatMessageSchema],
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+}, { _id: false });
+
+const CanvasSchema: Schema = new Schema({
+  userId: {
+    type: String,
+    required: true,
+    index: true,
+  },
+  username: {
+    type: String,
+    required: true,
+    index: true,
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  script: {
+    type: String,
+    required: true,
+    default: '{"nodes":[],"edges":[]}',
+  },
+  thumbnail: {
+    type: String,
+  },
+  chats: {
+    type: [ChatSchema],
+    default: [],
+  },
+  lastAccessedAt: {
+    type: Date,
+    default: Date.now,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+// Update timestamps on save
+CanvasSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
+});
+
+export const Canvas = mongoose.model<ICanvas>('Canvas', CanvasSchema);
+
+// Soft-deleted canvases
+export interface IDeletedCanvas extends Document {
+  userId: string;
+  username: string;
+  name: string;
+  script: string;
+  thumbnail?: string;
+  chats: IChat[];
+  deletedAt: Date;
+  originalCreatedAt: Date;
+  originalUpdatedAt: Date;
+}
+
+const DeletedCanvasSchema: Schema = new Schema({
+  userId: {
+    type: String,
+    required: true,
+  },
+  username: {
+    type: String,
+    required: true,
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  script: {
+    type: String,
+    required: true,
+  },
+  thumbnail: {
+    type: String,
+  },
+  chats: [ChatSchema],
+  deletedAt: {
+    type: Date,
+    default: Date.now,
+  },
+  originalCreatedAt: {
+    type: Date,
+  },
+  originalUpdatedAt: {
+    type: Date,
+  },
+});
+
+export const DeletedCanvas = mongoose.model<IDeletedCanvas>('DeletedCanvas', DeletedCanvasSchema);

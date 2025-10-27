@@ -1,262 +1,216 @@
-import { useCallback, useMemo } from 'react';
-import { Code2, Layout, Download, Image as ImageIcon, Plus, Type, Square, Circle, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Save, Download, RefreshCw } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
-import ReactFlow, {
-  Background,
-  Controls,
-  MiniMap,
-  addEdge,
-  useNodesState,
-  useEdgesState,
-  Connection,
-  Node,
-  Edge,
-  BackgroundVariant,
-  Panel,
-  ReactFlowProvider,
-} from 'reactflow';
-import 'reactflow/dist/style.css';
-import { TextNode } from './nodes/TextNode';
-import { ShapeNode } from './nodes/ShapeNode';
-import type { Board } from '../BoardPage';
+import { Badge } from '../ui/badge';
+import { toast } from 'sonner';
+import type { Canvas } from '../BoardPage';
 
 interface CanvasAreaProps {
-  board: Board;
-  viewMode: 'canvas' | 'code';
-  onViewModeChange: (mode: 'canvas' | 'code') => void;
+  canvas: Canvas;
+  username: string;
+  script: string;
+  onScriptChange: (script: string) => void;
 }
 
-const initialNodes: Node[] = [
-  {
-    id: '1',
-    type: 'textNode',
-    position: { x: 250, y: 100 },
-    data: { label: 'Welcome to your board!\nDouble-click to edit' },
-  },
-  {
-    id: '2',
-    type: 'shapeNode',
-    position: { x: 100, y: 300 },
-    data: { label: 'Shape Node' },
-  },
-];
+export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasAreaProps) {
+  const [localScript, setLocalScript] = useState(script);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-const initialEdges: Edge[] = [];
+  // Update local script when canvas changes
+  useEffect(() => {
+    setLocalScript(script);
+    setHasUnsavedChanges(false);
+  }, [script, canvas.id]);
 
-function CanvasAreaContent({ board, viewMode, onViewModeChange }: CanvasAreaProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  // Auto-save with debounce (2 seconds after last edit)
+  useEffect(() => {
+    if (localScript !== script) {
+      setHasUnsavedChanges(true);
+      
+      // Clear existing timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
 
-  const nodeTypes = useMemo(
-    () => ({
-      textNode: TextNode,
-      shapeNode: ShapeNode,
-    }),
-    []
-  );
-
-  const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
-  );
-
-  const addTextNode = useCallback(() => {
-    const newNode: Node = {
-      id: `node-${Date.now()}`,
-      type: 'textNode',
-      position: { x: Math.random() * 400, y: Math.random() * 400 },
-      data: { label: 'New text node\nDouble-click to edit' },
-    };
-    setNodes((nds) => [...nds, newNode]);
-  }, [setNodes]);
-
-  const addShapeNode = useCallback(() => {
-    const newNode: Node = {
-      id: `node-${Date.now()}`,
-      type: 'shapeNode',
-      position: { x: Math.random() * 400, y: Math.random() * 400 },
-      data: { label: 'New Shape' },
-    };
-    setNodes((nds) => [...nds, newNode]);
-  }, [setNodes]);
-
-  const clearCanvas = useCallback(() => {
-    if (confirm('Are you sure you want to clear the canvas?')) {
-      setNodes([]);
-      setEdges([]);
+      // Set new timeout to save
+      saveTimeoutRef.current = setTimeout(() => {
+        saveScript(localScript);
+      }, 2000); // 2 second debounce
     }
-  }, [setNodes, setEdges]);
 
-  const exportAsJSON = useCallback(() => {
-    const data = {
-      board: board.name,
-      nodes,
-      edges,
-      exportDate: new Date().toISOString(),
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${board.name}-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [board.name, nodes, edges]);
+  }, [localScript]);
+
+  const saveScript = async (scriptToSave: string) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(
+        `http://localhost:3001/api/canvas/${username}/${canvas.id}/script`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ script: scriptToSave }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setLastSaved(new Date());
+        setHasUnsavedChanges(false);
+        onScriptChange(scriptToSave);
+      } else {
+        toast.error('Failed to save changes');
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error('Failed to save changes');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleScriptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setLocalScript(e.target.value);
+  };
+
+  const handleManualSave = () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveScript(localScript);
+  };
+
+  const handleExport = () => {
+    try {
+      const blob = new Blob([localScript], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${canvas.name}-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Canvas exported!');
+    } catch (error) {
+      toast.error('Failed to export canvas');
+    }
+  };
+
+  const formatScript = () => {
+    try {
+      const parsed = JSON.parse(localScript);
+      const formatted = JSON.stringify(parsed, null, 2);
+      setLocalScript(formatted);
+      toast.success('Script formatted!');
+    } catch (error) {
+      toast.error('Invalid JSON - cannot format');
+    }
+  };
+
+  const formatLastSaved = () => {
+    if (!lastSaved) return 'Never';
+    
+    const now = new Date();
+    const diffMs = now.getTime() - lastSaved.getTime();
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffSecs < 5) return 'Just now';
+    if (diffSecs < 60) return `${diffSecs}s ago`;
+    if (diffMins < 60) return `${diffMins}m ago`;
+    return lastSaved.toLocaleTimeString();
+  };
 
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Top Controls */}
       <div className="flex items-center justify-between px-6 py-4 bg-card border-b border-border">
         <div className="flex items-center gap-4">
-          <Tabs value={viewMode} onValueChange={(v) => onViewModeChange(v as 'canvas' | 'code')}>
-            <TabsList>
-              <TabsTrigger value="canvas" className="gap-2">
-                <Layout className="h-4 w-4" />
-                Canvas
-              </TabsTrigger>
-              <TabsTrigger value="code" className="gap-2">
-                <Code2 className="h-4 w-4" />
-                JSON
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {viewMode === 'canvas' && (
-            <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Node
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={addTextNode}>
-                    <Type className="h-4 w-4 mr-2" />
-                    Text Node
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={addShapeNode}>
-                    <Square className="h-4 w-4 mr-2" />
-                    Shape Node
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              <Button variant="outline" size="sm" onClick={clearCanvas}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Clear
-              </Button>
-            </>
-          )}
+          <div>
+            <h2 className="text-lg font-semibold">{canvas.name}</h2>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+              {isSaving ? (
+                <>
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <span>Last saved: {formatLastSaved()}</span>
+                  {hasUnsavedChanges && (
+                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 ml-2">
+                      Unsaved changes
+                    </Badge>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportAsJSON}>
-            <Download className="h-4 w-4 mr-2" />
-            Export JSON
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={formatScript}
+          >
+            Format JSON
           </Button>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export PDF
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleManualSave}
+            disabled={isSaving || !hasUnsavedChanges}
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Save Now
           </Button>
-          <Button variant="outline" size="sm">
-            <ImageIcon className="h-4 w-4 mr-2" />
-            Export Image
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleExport}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export
           </Button>
         </div>
       </div>
 
-      {/* Canvas/Code Area */}
-      <div className="flex-1 overflow-hidden relative">
-        {viewMode === 'canvas' ? (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            nodeTypes={nodeTypes}
-            fitView
-            attributionPosition="bottom-left"
-            deleteKeyCode="Delete"
-            multiSelectionKeyCode="Shift"
-            defaultEdgeOptions={{
-              type: 'smoothstep',
-              animated: true,
-              style: { stroke: '#0ea5e9', strokeWidth: 2 },
-            }}
-          >
-            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e2e8f0" />
-            <Controls 
-              showInteractive={false}
-              className="bg-white border border-border rounded-lg shadow-lg"
-            />
-            <MiniMap 
-              nodeColor="#0ea5e9"
-              maskColor="rgba(0, 0, 0, 0.05)"
-              className="bg-white border border-border rounded-lg"
-              zoomable
-              pannable
-            />
-            <Panel position="bottom-center" className="bg-white/90 backdrop-blur-sm border border-border rounded-lg px-4 py-2 shadow-sm">
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span>{nodes.length} nodes</span>
-                <span>•</span>
-                <span>{edges.length} edges</span>
-                <span>•</span>
-                <span className="text-xs">Double-click nodes to edit • Delete key to remove</span>
-              </div>
-            </Panel>
-          </ReactFlow>
-        ) : (
-          <div className="w-full h-full bg-slate-900 text-slate-100 p-6 font-mono text-sm overflow-auto">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-slate-400">
-                  {`// ${board.name} - Board Data (JSON)`}
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={exportAsJSON}
-                  className="bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700"
-                >
-                  <Download className="h-3 w-3 mr-2" />
-                  Download
-                </Button>
-              </div>
-              <pre className="text-slate-300 leading-relaxed">
-                {JSON.stringify({ 
-                  boardName: board.name,
-                  nodes: nodes.map(n => ({
-                    id: n.id,
-                    type: n.type,
-                    position: n.position,
-                    data: n.data,
-                  })),
-                  edges: edges.map(e => ({
-                    id: e.id,
-                    source: e.source,
-                    target: e.target,
-                  })),
-                }, null, 2)}
-              </pre>
-            </div>
+      {/* Script Editor */}
+      <div className="flex-1 overflow-hidden p-6">
+        <div className="h-full bg-slate-900 rounded-lg overflow-hidden border border-border shadow-inner">
+          <textarea
+            value={localScript}
+            onChange={handleScriptChange}
+            className="w-full h-full bg-slate-900 text-slate-100 p-6 font-mono text-sm resize-none focus:outline-none"
+            placeholder='{"nodes": [], "edges": []}'
+            spellCheck={false}
+          />
+        </div>
+      </div>
+
+      {/* Bottom Info Bar */}
+      <div className="px-6 py-3 bg-card border-t border-border">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-4">
+            <span>Canvas ID: {canvas.id}</span>
+            <span>•</span>
+            <span>Chats: {canvas.chatCount || 0}</span>
           </div>
-        )}
+          <div>
+            Auto-saves 2 seconds after last edit
+          </div>
+        </div>
       </div>
     </div>
-  );
-}
-
-export function CanvasArea(props: CanvasAreaProps) {
-  return (
-    <ReactFlowProvider>
-      <CanvasAreaContent {...props} />
-    </ReactFlowProvider>
   );
 }

@@ -240,11 +240,21 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
 
       {/* Script Editor */}
       <div className="flex-1 overflow-hidden p-6">
-        <div className="h-full bg-slate-900 rounded-lg overflow-hidden border border-border shadow-inner">
+        <div className="h-full bg-slate-900 rounded-lg overflow-hidden border border-border shadow-inner flex">
+          {/* Line numbers */}
+          <div className="bg-slate-950 px-3 py-6 text-slate-500 text-sm font-mono select-none overflow-hidden">
+            {localScript.split('\n').map((_, index) => (
+              <div key={index} className="leading-6 text-right">
+                {index + 1}
+              </div>
+            ))}
+          </div>
+          
+          {/* Code editor */}
           <textarea
             value={localScript}
             onChange={handleScriptChange}
-            className="w-full h-full bg-slate-900 text-slate-100 p-6 font-mono text-sm resize-none focus:outline-none"
+            className="flex-1 bg-slate-900 text-slate-100 px-6 py-6 font-mono text-sm resize-none focus:outline-none leading-6"
             placeholder='{"nodes": [], "edges": []}'
             spellCheck={false}
           />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronRight, ChevronLeft, Plus, MessageSquare, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -27,16 +27,22 @@ interface ChatSidebarProps {
 }
 
 export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSidebarProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [chats, setChats] = useState<Chat[]>([]);
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [chats, setChats] = useState<any[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chats, currentChatId]);
 
   // Load chats when canvas changes
   useEffect(() => {
     if (currentCanvas && currentCanvas.chats) {
       setChats(currentCanvas.chats);
-      // Select the most recent chat
+      // Select the most recent chat if available
       if (currentCanvas.chats.length > 0) {
         setCurrentChatId(currentCanvas.chats[currentCanvas.chats.length - 1].id);
       } else {
@@ -46,7 +52,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
       setChats([]);
       setCurrentChatId(null);
     }
-  }, [currentCanvas?.id]);
+  }, [currentCanvas]);
 
   const getCurrentChat = () => {
     return chats.find(c => c.id === currentChatId);
@@ -82,6 +88,9 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
   const handleSendMessage = async () => {
     if (!inputValue.trim() || !currentCanvas || !currentChatId) return;
     
+    const userMessage = inputValue;
+    setInputValue('');
+    
     try {
       // Add user message
       const response = await fetch(
@@ -89,21 +98,21 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role: 'user', content: inputValue }),
+          body: JSON.stringify({ role: 'user', content: userMessage }),
         }
       );
 
       const data = await response.json();
 
       if (data.success) {
-        // Update local state
+        // Update local state with user message
         const updatedChats = chats.map(chat => {
           if (chat.id === currentChatId) {
             return {
               ...chat,
               messages: [...chat.messages, {
                 role: 'user' as const,
-                content: inputValue,
+                content: userMessage,
                 timestamp: new Date(),
               }],
             };
@@ -111,11 +120,45 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
           return chat;
         });
         setChats(updatedChats);
-        setInputValue('');
 
-        // TODO: Here you would call your AI/chat API
-        // For now, just add a placeholder response
-        // In the future, this is where chat would analyze and modify the canvas
+        // Dummy AI response
+        setTimeout(async () => {
+          const dummyResponses = [
+            "I understand. Let me help you with that.",
+            "That's a great idea! I can assist with modifying the canvas.",
+            "I've noted that. Would you like me to make changes to the canvas?",
+            "Interesting! I can help visualize that data.",
+            "Got it! I'm here to help with your canvas.",
+            "I can help you create charts and visualizations for that.",
+            "That sounds like a useful addition to your canvas!",
+          ];
+          const randomResponse = dummyResponses[Math.floor(Math.random() * dummyResponses.length)];
+          
+          // Send assistant message to database
+          await fetch(
+            `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/chat/${currentChatId}/message`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ role: 'assistant', content: randomResponse }),
+            }
+          );
+          
+          // Update local state with assistant message
+          setChats(prevChats => prevChats.map(chat => {
+            if (chat.id === currentChatId) {
+              return {
+                ...chat,
+                messages: [...chat.messages, {
+                  role: 'assistant' as const,
+                  content: randomResponse,
+                  timestamp: new Date(),
+                }],
+              };
+            }
+            return chat;
+          }));
+        }, 500); // Half second delay to simulate thinking
       }
     } catch (error) {
       console.error('Send message error:', error);
@@ -149,92 +192,96 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
         className={`
           bg-card border-r border-border transition-all duration-300 ease-in-out
           ${isExpanded ? 'w-80' : 'w-12'}
-          flex flex-col
+          flex flex-col h-full
         `}
       >
-        <div className="h-full flex flex-col">
-          {isExpanded ? (
-            <>
-              <div className="p-4 border-b border-border space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5 text-primary" />
-                    <span className="text-sm font-medium">Chat</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsExpanded(false)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
+        {isExpanded ? (
+          <>
+            <div className="p-4 border-b border-border space-y-3 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-medium">Chat</span>
                 </div>
-                
-                {chats.length > 0 && (
-                  <Select 
-                    value={currentChatId || undefined} 
-                    onValueChange={setCurrentChatId}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a chat" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {chats.map((chat, index) => (
-                        <SelectItem key={chat.id} value={chat.id}>
-                          Chat {index + 1} ({chat.messages.length} msgs)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={handleCreateNewChat}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsExpanded(false)}
+                  className="h-8 w-8 p-0"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Chat
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
               </div>
               
-              <ScrollArea className="flex-1 p-4">
-                {currentChatId && getCurrentChat() ? (
-                  <div className="space-y-4">
-                    {getCurrentChat()!.messages.map((message, index) => (
-                      <div
-                        key={index}
-                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`
-                            max-w-[80%] rounded-lg px-4 py-2
-                            ${message.role === 'user' 
-                              ? 'bg-primary text-white' 
-                              : 'bg-muted text-foreground'}
-                          `}
-                        >
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                          <span className="text-xs opacity-70 mt-1 block">
-                            {formatChatTime(message.timestamp)}
-                          </span>
-                        </div>
-                      </div>
+              {chats.length > 0 && (
+                <Select 
+                  value={currentChatId || undefined} 
+                  onValueChange={setCurrentChatId}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a chat" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {chats.map((chat, index) => (
+                      <SelectItem key={chat.id} value={chat.id}>
+                        Chat {index + 1} ({chat.messages.length} msgs)
+                      </SelectItem>
                     ))}
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center text-muted-foreground">
-                      <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No chat selected</p>
-                      <p className="text-xs mt-1">Create a new chat to get started</p>
+                  </SelectContent>
+                </Select>
+              )}
+              
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={handleCreateNewChat}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Chat
+              </Button>
+            </div>
+            
+            <div className="flex-1 overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-4">
+                  {currentChatId && getCurrentChat() ? (
+                    <div className="space-y-4">
+                      {getCurrentChat()!.messages.map((message, index) => (
+                        <div
+                          key={index}
+                          className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`
+                              max-w-[80%] rounded-lg px-4 py-2
+                              ${message.role === 'user' 
+                                ? 'bg-primary text-white' 
+                                : 'bg-muted text-foreground'}
+                            `}
+                          >
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                            <span className="text-xs opacity-70 mt-1 block">
+                              {formatChatTime(message.timestamp)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      <div ref={messagesEndRef} />
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center text-muted-foreground">
+                        <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No chat selected</p>
+                        <p className="text-xs mt-1">Create a new chat to get started</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </ScrollArea>
+            </div>
 
-              <div className="p-4 border-t border-border">
+            <div className="p-4 border-t border-border flex-shrink-0">
                 <div className="flex gap-2">
                   <Input
                     placeholder="Type a message..."
@@ -269,7 +316,6 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
               </Button>
             </div>
           )}
-        </div>
       </div>
     </>
   );

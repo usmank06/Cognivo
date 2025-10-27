@@ -88,27 +88,6 @@ export function BoardSidebar({
                   </Button>
                 </div>
                 
-                {currentCanvas && canvases.length > 0 && (
-                  <Select 
-                    value={currentCanvas.id} 
-                    onValueChange={(id) => {
-                      const canvas = canvases.find(c => c.id === id);
-                      if (canvas) onSelectCanvas(canvas);
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {canvases.map((canvas) => (
-                        <SelectItem key={canvas.id} value={canvas.id}>
-                          {canvas.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full">

@@ -62,9 +62,10 @@
             "vite": "^6.4.1"
       },
       "scripts": {
-            "dev": "concurrently \"tsx api-server.js\" \"vite\"",
+            "dev": "concurrently \"tsx api-server.js\" \"vite\" \"cd python-api && python main.py\"",
             "dev:vite": "vite",
             "dev:api": "tsx api-server.js",
+            "dev:python": "cd python-api && python main.py",
             "build": "vite build"
       }
 }

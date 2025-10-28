@@ -101,16 +101,13 @@ const DataFileSchema: Schema = new Schema({
     type: String,
   },
   fileSchema: {
-    type: {
-      columns: [{
-        name: String,
-        type: String,
-        description: String,
-      }],
-      rowCount: Number,
-      summary: String,
-    },
-    required: false,
+    columns: [{
+      name: { type: String, required: true },
+      type: { type: String, required: true },
+      description: { type: String, required: false },
+    }],
+    rowCount: { type: Number, required: false },
+    summary: { type: String, required: false },
   },
   subsets: [DataSubsetSchema],
   lastAccessedAt: {
@@ -185,16 +182,13 @@ const DeletedDataFileSchema: Schema = new Schema({
     default: Date.now,
   },
   fileSchema: {
-    type: {
-      columns: [{
-        name: String,
-        type: String,
-        description: String,
-      }],
-      rowCount: Number,
-      summary: String,
-    },
-    required: false,
+    columns: [{
+      name: { type: String, required: true },
+      type: { type: String, required: true },
+      description: { type: String, required: false },
+    }],
+    rowCount: { type: Number, required: false },
+    summary: { type: String, required: false },
   },
   subsets: [DataSubsetSchema],
   originalCreatedAt: {

@@ -1,0 +1,35 @@
+# Python virtual environment
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.local
+
+# ML models
+*.pkl
+*.h5
+*.joblib
+models/
+
+# Data files
+*.csv
+*.xlsx
+*.json
+data/

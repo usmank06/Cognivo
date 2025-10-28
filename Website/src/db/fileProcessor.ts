@@ -1,6 +1,8 @@
 import { DataFile, IDataSubset } from './models/DataFile';
 import { ensureConnected } from './mongodb';
 
+const PYTHON_API_URL = 'http://localhost:8000';
+
 // This is where you'll implement your actual file processing logic
 // For now, this is a placeholder structure showing how the processing works
 
@@ -22,39 +24,28 @@ export async function processFileInBackground(fileId: string, fileBuffer: Buffer
     await ensureConnected();
     
     // Stage 1: Reading file
-    await updateProcessingStatus(fileId, 'processing', 'Reading file...', 10);
-    await delay(500); // Simulate work
+    await updateProcessingStatus(fileId, 'processing', 'Preparing file...', 10);
+    await delay(300);
     
-    // Stage 2: Extracting data
-    await updateProcessingStatus(fileId, 'processing', 'Extracting data...', 30);
-    await delay(500); // Simulate work
+    // Stage 2: Sending to Python API
+    await updateProcessingStatus(fileId, 'processing', 'Sending to processing engine...', 20);
+    await delay(300);
     
-    // TODO: Your actual file reading logic here
-    // const rawData = await readFile(fileBuffer, fileType);
+    // Stage 3: Call Python API for processing
+    await updateProcessingStatus(fileId, 'processing', 'Analyzing file structure...', 40);
     
-    // Stage 3: Creating schema
-    await updateProcessingStatus(fileId, 'processing', 'Creating schema...', 50);
-    await delay(500); // Simulate work
+    const result = await callPythonAPIForProcessing(fileBuffer, fileName, fileType);
     
-    // TODO: Your actual schema creation logic here
-    // const schema = await createSchema(rawData);
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Python API processing failed');
+    }
     
-    // Stage 4: Generating subsets
-    await updateProcessingStatus(fileId, 'processing', 'Generating data subsets...', 70);
-    await delay(1000); // Simulate work
-    
-    // TODO: Your actual subset generation logic here
-    // const subsets = await generateSubsets(rawData, schema);
-    
-    // For now, create dummy data to show structure
-    const result = await createDummyProcessingResult(fileName);
-    
-    // Stage 5: Finalizing
-    await updateProcessingStatus(fileId, 'processing', 'Finalizing...', 95);
+    // Stage 4: Saving results
+    await updateProcessingStatus(fileId, 'processing', 'Saving results...', 90);
     await delay(300);
     
     // Mark as completed
-    await completeProcessing(fileId, result);
+    await completeProcessing(fileId, result.data);
     
     console.log(`✅ File processing completed for: ${fileName}`);
     
@@ -67,6 +58,57 @@ export async function processFileInBackground(fileId: string, fileBuffer: Buffer
       0, 
       error instanceof Error ? error.message : 'Unknown error'
     );
+  }
+}
+
+/**
+ * Call Python API to process the file
+ */
+async function callPythonAPIForProcessing(
+  fileBuffer: Buffer, 
+  fileName: string, 
+  fileType: string
+): Promise<{ success: boolean; data?: FileProcessingResult; error?: string }> {
+  try {
+    // Convert buffer to base64 for transmission
+    const base64Buffer = fileBuffer.toString('base64');
+    
+    const response = await fetch(`${PYTHON_API_URL}/api/process-file`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fileBuffer: base64Buffer,
+        fileName: fileName,
+        fileType: fileType,
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Python API returned ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      return { success: false, error: result.error || 'Processing failed' };
+    }
+    
+    // Transform Python API response to our format
+    const processedData: FileProcessingResult = {
+      schema: result.file_schema,
+      subsets: result.subsets,
+    };
+    
+    return { success: true, data: processedData };
+    
+  } catch (error) {
+    console.error('Error calling Python API:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to connect to processing engine' 
+    };
   }
 }
 
@@ -117,132 +159,23 @@ function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * PLACEHOLDER: Create dummy processing result
- * Replace this with your actual logic
- */
-async function createDummyProcessingResult(fileName: string): Promise<FileProcessingResult> {
-  // This is where you'll implement your actual logic
-  // For now, returning example structure
-  
-  return {
-    schema: {
-      columns: [
-        { name: 'date', type: 'string', description: 'Transaction date' },
-        { name: 'amount', type: 'number', description: 'Purchase amount' },
-        { name: 'category', type: 'string', description: 'Purchase category' },
-      ],
-      rowCount: 1500,
-      summary: `Data extracted from ${fileName}. Contains 1,500 records with dates, amounts, and categories.`,
-    },
-    subsets: [
-      {
-        description: 'Total purchases over time',
-        xAxisName: 'Date',
-        xAxisDescription: 'Transaction date (monthly aggregation)',
-        yAxisName: 'Total Amount',
-        yAxisDescription: 'Sum of all purchase amounts',
-        dataPoints: generateDummyTimeSeries(),
-      },
-      {
-        description: 'Purchase distribution by category',
-        xAxisName: 'Category',
-        xAxisDescription: 'Purchase categories',
-        yAxisName: 'Count',
-        yAxisDescription: 'Number of purchases in each category',
-        dataPoints: generateDummyCategories(),
-      },
-      {
-        description: 'Average purchase value over time',
-        xAxisName: 'Date',
-        xAxisDescription: 'Transaction date (weekly aggregation)',
-        yAxisName: 'Average Amount',
-        yAxisDescription: 'Mean purchase value',
-        dataPoints: generateDummyAverages(),
-      },
-    ],
-  };
-}
-
-// Dummy data generators (replace with your actual logic)
-function generateDummyTimeSeries() {
-  const data = [];
-  const startDate = new Date('2024-01-01');
-  for (let i = 0; i < 12; i++) {
-    const date = new Date(startDate);
-    date.setMonth(startDate.getMonth() + i);
-    data.push({
-      x: date.toISOString().slice(0, 7), // YYYY-MM
-      y: Math.floor(Math.random() * 50000) + 10000,
-    });
-  }
-  return data;
-}
-
-function generateDummyCategories() {
-  const categories = ['Electronics', 'Groceries', 'Clothing', 'Entertainment', 'Transportation'];
-  return categories.map(cat => ({
-    x: cat,
-    y: Math.floor(Math.random() * 300) + 50,
-  }));
-}
-
-function generateDummyAverages() {
-  const data = [];
-  for (let i = 0; i < 20; i++) {
-    data.push({
-      x: `Week ${i + 1}`,
-      y: Math.floor(Math.random() * 200) + 50,
-    });
-  }
-  return data;
-}
-
 // ============================================
-// TODO: Implement your actual processing logic
+// TODO: Implement your actual processing logic in Python API
+// Location: python-api/main.py
+// 
+// The Python API endpoint /api/process-file will receive:
+// - fileBuffer (base64 encoded file)
+// - fileName
+// - fileType
+//
+// It should return:
+// - schema: { columns, rowCount, summary }
+// - subsets: [ { description, xAxisName, yAxisName, dataPoints } ]
+//
+// Current implementation in Python returns dummy data.
+// Add your pandas/numpy logic there to:
+// 1. Parse CSV/Excel files
+// 2. Analyze columns and detect types
+// 3. Generate statistics and subsets
+// 4. Create meaningful data visualizations
 // ============================================
-
-/**
- * Read and parse the uploaded file
- * @param fileBuffer - The file data
- * @param fileType - File type (csv, xlsx, etc)
- */
-export async function readFile(fileBuffer: Buffer, fileType: string): Promise<any> {
-  // TODO: Implement file reading logic
-  // - For CSV: parse CSV into rows/columns
-  // - For Excel: use a library like xlsx to read sheets
-  // - Return structured data
-  
-  throw new Error('Not implemented - add your file reading logic here');
-}
-
-/**
- * Create schema/summary from raw data
- * @param rawData - The parsed file data
- */
-export async function createSchema(rawData: any): Promise<FileProcessingResult['schema']> {
-  // TODO: Implement schema creation logic
-  // - Detect column types
-  // - Count rows
-  // - Generate summary description
-  // - Detect relationships/patterns
-  
-  throw new Error('Not implemented - add your schema creation logic here');
-}
-
-/**
- * Generate mini subsets from the data
- * @param rawData - The parsed file data
- * @param schema - The file schema
- */
-export async function generateSubsets(rawData: any, schema: any): Promise<IDataSubset[]> {
-  // TODO: Implement subset generation logic
-  // - Identify interesting data relationships
-  // - Create time series aggregations
-  // - Create category distributions
-  // - Create correlations
-  // - Generate descriptions for each subset
-  // - Return array of subsets
-  
-  throw new Error('Not implemented - add your subset generation logic here');
-}

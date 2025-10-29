@@ -2,9 +2,11 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
+import { GridFSBucket } from 'mongodb';
 
 let mongoServer: MongoMemoryServer | null = null;
 let isConnected = false;
+let gridFSBucket: GridFSBucket | null = null;
 
 export async function connectDB() {
   try {
@@ -35,9 +37,20 @@ export async function connectDB() {
     await mongoose.connect(uri);
     isConnected = true;
     
+    // Initialize GridFS bucket for file storage
+    const db = mongoose.connection.db;
+    if (!db) {
+      throw new Error('MongoDB database not available');
+    }
+    
+    gridFSBucket = new GridFSBucket(db, {
+      bucketName: 'uploads' // Files will be stored in 'uploads.files' and 'uploads.chunks' collections
+    });
+    
     console.log('✅ MongoDB connected successfully!');
     console.log('📍 MongoDB URL: ' + uri);
     console.log('📁 Data location: ./mongodb-data/');
+    console.log('📦 GridFS initialized for file storage');
 
     return mongoose.connection;
   } catch (error) {
@@ -52,6 +65,13 @@ export async function ensureConnected() {
   }
 }
 
+export function getGridFSBucket(): GridFSBucket {
+  if (!gridFSBucket) {
+    throw new Error('GridFS not initialized. Call connectDB() first.');
+  }
+  return gridFSBucket;
+}
+
 export async function disconnectDB() {
   try {
     await mongoose.disconnect();
@@ -59,6 +79,7 @@ export async function disconnectDB() {
       await mongoServer.stop();
     }
     isConnected = false;
+    gridFSBucket = null;
     console.log('👋 MongoDB disconnected');
   } catch (error) {
     console.error('Error disconnecting MongoDB:', error);

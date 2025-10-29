@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { ObjectId } from 'mongodb';
 
 // Subset of data extracted from the file
 export interface IDataSubset {
@@ -19,6 +20,9 @@ export interface IDataFile extends Document {
   fileSize: number;
   fileType: string;
   uploadedAt: Date;
+  
+  // GridFS file storage
+  gridfsFileId?: ObjectId; // Reference to file stored in GridFS
   
   // Processing status
   status: 'uploading' | 'processing' | 'completed' | 'error';
@@ -83,6 +87,10 @@ const DataFileSchema: Schema = new Schema({
     type: Date,
     default: Date.now,
   },
+  gridfsFileId: {
+    type: Schema.Types.ObjectId,
+    required: false,
+  },
   status: {
     type: String,
     enum: ['uploading', 'processing', 'completed', 'error'],
@@ -138,6 +146,9 @@ export interface IDeletedDataFile extends Document {
   uploadedAt: Date;
   deletedAt: Date;
   
+  // GridFS file storage
+  gridfsFileId?: ObjectId; // Keep reference so deleted files can be downloaded/restored
+  
   fileSchema?: {
     columns: Array<{ name: string; type: string; description?: string }>;
     rowCount: number;
@@ -176,6 +187,10 @@ const DeletedDataFileSchema: Schema = new Schema({
   },
   uploadedAt: {
     type: Date,
+  },
+  gridfsFileId: {
+    type: Schema.Types.ObjectId,
+    required: false,
   },
   deletedAt: {
     type: Date,

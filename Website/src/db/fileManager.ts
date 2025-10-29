@@ -1,6 +1,7 @@
 import { DataFile, DeletedDataFile } from './models/DataFile';
-import { ensureConnected } from './mongodb';
+import { ensureConnected, getGridFSBucket } from './mongodb';
 import { processFileInBackground } from './fileProcessor';
+import { Readable } from 'stream';
 
 /**
  * Upload a new file and start processing
@@ -16,13 +17,33 @@ export async function uploadFile(
   try {
     await ensureConnected();
     
-    // Create initial file record
+    // Store file in GridFS
+    const bucket = getGridFSBucket();
+    const uploadStream = bucket.openUploadStream(fileName, {
+      metadata: {
+        username,
+        userId,
+        uploadedAt: new Date(),
+        fileType,
+      }
+    });
+    
+    // Convert buffer to readable stream and pipe to GridFS
+    const readableStream = Readable.from(fileBuffer);
+    const gridfsFileId = await new Promise<any>((resolve, reject) => {
+      readableStream.pipe(uploadStream)
+        .on('error', reject)
+        .on('finish', () => resolve(uploadStream.id));
+    });
+    
+    // Create initial file record with GridFS reference
     const dataFile = await DataFile.create({
       userId,
       username,
       originalFileName: fileName,
       fileSize,
       fileType,
+      gridfsFileId, // Store reference to GridFS file
       status: 'uploading',
       processingProgress: 0,
       subsets: [],
@@ -150,6 +171,7 @@ export async function updateFileNickname(fileId: string, username: string, nickn
 
 /**
  * Soft delete a file (move to deleted collection)
+ * NOTE: GridFS file is NOT deleted - keeps file data for deleted files
  */
 export async function deleteFile(fileId: string, username: string) {
   try {
@@ -161,7 +183,7 @@ export async function deleteFile(fileId: string, username: string) {
       return { success: false, error: 'File not found' };
     }
     
-    // Move to deleted collection
+    // Move to deleted collection (keep gridfsFileId reference)
     await DeletedDataFile.create({
       userId: file.userId,
       username: file.username,
@@ -170,6 +192,7 @@ export async function deleteFile(fileId: string, username: string) {
       fileSize: file.fileSize,
       fileType: file.fileType,
       uploadedAt: file.uploadedAt,
+      gridfsFileId: file.gridfsFileId, // Keep GridFS reference for recovery
       fileSchema: file.fileSchema,
       subsets: file.subsets,
       originalCreatedAt: file.uploadedAt,
@@ -177,7 +200,7 @@ export async function deleteFile(fileId: string, username: string) {
       deletedAt: new Date(),
     });
     
-    // Delete from active collection
+    // Delete from active collection (GridFS file remains)
     await DataFile.deleteOne({ _id: fileId });
     
     return { success: true, message: 'File deleted successfully' };
@@ -241,4 +264,60 @@ export async function getUserFileStats(username: string) {
     console.error('Get file stats error:', error);
     return { success: false, error: 'Failed to get file statistics' };
   }
+}
+
+/**
+ * Download a file from GridFS
+ */
+export async function downloadFile(fileId: string, username: string) {
+  try {
+    await ensureConnected();
+    
+    const file = await DataFile.findOne({ _id: fileId, username });
+    
+    if (!file) {
+      return { success: false, error: 'File not found' };
+    }
+    
+    if (!file.gridfsFileId) {
+      return { success: false, error: 'File data not available' };
+    }
+    
+    const bucket = getGridFSBucket();
+    
+    // Return download stream
+    const downloadStream = bucket.openDownloadStream(file.gridfsFileId);
+    
+    // Update last accessed
+    file.lastAccessedAt = new Date();
+    await file.save();
+    
+    return { 
+      success: true, 
+      stream: downloadStream,
+      fileName: file.originalFileName,
+      fileType: file.fileType,
+      fileSize: file.fileSize,
+    };
+  } catch (error) {
+    console.error('Download file error:', error);
+    return { success: false, error: 'Failed to download file' };
+  }
+}
+
+/**
+ * Get file buffer from GridFS (for processing)
+ */
+export async function getFileBuffer(gridfsFileId: any): Promise<Buffer> {
+  const bucket = getGridFSBucket();
+  const downloadStream = bucket.openDownloadStream(gridfsFileId);
+  
+  const chunks: Buffer[] = [];
+  
+  return new Promise((resolve, reject) => {
+    downloadStream
+      .on('data', (chunk) => chunks.push(chunk))
+      .on('error', reject)
+      .on('end', () => resolve(Buffer.concat(chunks)));
+  });
 }

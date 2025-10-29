@@ -18,6 +18,7 @@ import {
   deleteFile,
   getFileStatus,
   getUserFileStats,
+  downloadFile,
 } from './src/db/fileManager.ts';
 import {
   createCanvas,
@@ -327,6 +328,29 @@ app.get('/api/files/:username/stats/summary', async (req, res) => {
     const result = await getUserFileStats(username);
     res.json(result);
   } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Download file
+app.get('/api/files/:username/:fileId/download', async (req, res) => {
+  try {
+    const { username, fileId } = req.params;
+    const result = await downloadFile(fileId, username);
+    
+    if (!result.success) {
+      return res.status(404).json({ success: false, error: result.error });
+    }
+    
+    // Set response headers
+    res.setHeader('Content-Type', result.fileType);
+    res.setHeader('Content-Length', result.fileSize);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
+    
+    // Pipe the GridFS stream to response
+    result.stream.pipe(res);
+  } catch (error) {
+    console.error('File download error:', error);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });

@@ -561,6 +561,34 @@ def build_system_prompt(current_canvas: str, data_sources: List[Dict[str, Any]])
             f"- {file_name}: {len(columns)} columns, {row_count} rows, {len(subsets)} pre-generated visualizations"
         )
     
+    # Include FULL data from ALL subsets in context
+    full_subsets_data = []
+    for ds in data_sources:
+        file_id = ds.get("_id", "unknown")
+        file_name = ds.get("originalFileName", "Unknown")
+        subsets = ds.get("subsets", [])
+        
+        if subsets:
+            full_subsets_data.append(f"\n**File: {file_name} (ID: {file_id})**")
+            full_subsets_data.append(f"Total subsets: {len(subsets)}\n")
+            
+            # Include ALL subsets with COMPLETE data
+            for i, subset in enumerate(subsets):
+                desc = subset.get("description", "")
+                x_axis = subset.get("xAxisName", "")
+                x_axis_desc = subset.get("xAxisDescription", "")
+                y_axis = subset.get("yAxisName", "")
+                y_axis_desc = subset.get("yAxisDescription", "")
+                data_points = subset.get("dataPoints", [])
+                
+                full_subsets_data.append(f"--- SUBSET {i+1} ---")
+                full_subsets_data.append(f"Description: {desc}")
+                full_subsets_data.append(f"X-Axis: {x_axis} ({x_axis_desc})")
+                full_subsets_data.append(f"Y-Axis: {y_axis} ({y_axis_desc})")
+                full_subsets_data.append(f"Data Points ({len(data_points)} total):")
+                full_subsets_data.append(json.dumps(data_points, indent=2))
+                full_subsets_data.append("")
+    
     system_prompt = f"""You are an AI assistant helping users build data visualizations on a canvas.
 
 **Current Canvas State:**
@@ -571,44 +599,131 @@ def build_system_prompt(current_canvas: str, data_sources: List[Dict[str, Any]])
 **Available Data Sources:**
 {chr(10).join(data_summary) if data_summary else "No data sources uploaded yet"}
 
-**Your Capabilities:**
-1. Have conversations about data analysis and visualization
-2. Use the `edit_canvas` tool to modify the canvas by providing new JSON
-3. Add nodes (charts, text, shapes) and connections (edges)
-4. Reference data sources in visualizations
+**Pre-generated Subsets with FULL DATA:**
+{chr(10).join(full_subsets_data) if full_subsets_data else "No subsets available yet"}
 
-**Canvas JSON Format:**
+**CRITICAL: Chart Node Structure**
+
+When creating chart nodes, you MUST embed ALL data directly in the node. DO NOT reference external files.
+
+**Chart Node Format (REQUIRED):**
+{{
+  "id": "unique-chart-id",
+  "type": "chart",
+  "position": {{"x": 100, "y": 100}},
+  "style": {{"width": 420, "height": 300}},
+  "data": {{
+    "label": "Chart Title",
+    "kind": "line|bar|area|pie|scatter|composed|radar|radialBar|funnel|treemap|sankey",
+    "xKey": "fieldName",
+    "yKey": "valueField",
+    "style": {{
+      "showGrid": true,
+      "showLegend": true,
+      "showTooltip": true,
+      "strokeColor": "#3b82f6",
+      "fillColor": "#3b82f6",
+      "strokeWidth": 2,
+      "lineType": "monotone|step|linear",
+      "showDots": true,
+      "barSize": 35,
+      "fillOpacity": 0.6,
+      "secondaryKey": "optionalSecondMetric"
+    }},
+    "data": [
+      {{"fieldName": "value1", "valueField": 100}},
+      {{"fieldName": "value2", "valueField": 200}}
+    ]
+  }}
+}}
+
+**Element Node Format (for titles, text, dividers):**
+{{
+  "id": "unique-element-id",
+  "type": "element",
+  "position": {{"x": 0, "y": 0}},
+  "style": {{"width": 1200, "height": 100}},
+  "data": {{
+    "kind": "title|sectionHeader|text|horizontalDivider|verticalDivider",
+    "text": "Content here",
+    "fontSize": 28,
+    "fontWeight": "bold|600|normal",
+    "textAlign": "left|center|right",
+    "textColor": "#1f2937",
+    "backgroundColor": "#dbeafe",
+    "dividerColor": "#3b82f6",
+    "dividerThickness": 3
+  }}
+}}
+
+**Chart Types & Usage:**
+- **line**: Time series, trends (xKey=date/category, yKey=metric, lineType=monotone/step/linear)
+- **bar**: Category comparisons (xKey=category, yKey=value, barSize=20-50)
+- **area**: Cumulative trends (xKey=date, yKey=value, fillOpacity=0.3-0.8)
+- **pie**: Distributions (nameKey=category, yKey=value)
+- **scatter**: Correlations (xKey=metric1, yKey=metric2)
+- **composed**: Multiple metrics (xKey=shared, yKey=primary, secondaryKey=secondary, tertiaryKey=third)
+- **radar**: Multi-dimensional (subject=dimension, A/B/C=metrics, fullMark=max)
+- **radialBar**: Circular bars (name=category, value=amount, fill=color)
+- **funnel**: Conversion stages (name=stage, value=count, fill=color)
+- **treemap**: Hierarchical (name=category, size=value, fill=color)
+- **sankey**: Flow diagrams (nodes array, links array with source/target/value)
+
+**IMPORTANT RULES:**
+1. **Embed data**: ALWAYS include the full "data" array with all data points in the chart node
+2. **Max 500 rows**: Data is small enough to embed completely
+3. **Use subsets**: Pick appropriate pre-generated subsets from the available data sources
+4. **Copy data points**: Take the dataPoints array from a subset and put it in the chart's data field
+5. **Match keys**: Ensure xKey and yKey match the field names in your data array
+6. **Position wisely**: Spread nodes out (x: 0, 440, 880, etc. y: increment by 300-400)
+7. **Include styling**: Always set width/height in style, and chart styling in data.style
+
+**Example - Adding a Bar Chart:**
+User: "Add a bar chart showing sales by month"
+
+You should use edit_canvas with:
 {{
   "nodes": [
     {{
-      "id": "unique-id",
-      "type": "text|shape|chart|table",
+      "id": "sales-bar-chart",
+      "type": "chart",
       "position": {{"x": 100, "y": 100}},
+      "style": {{"width": 500, "height": 350}},
       "data": {{
-        "label": "Node content",
-        "dataSource": "file-id",  // Optional: link to data
-        "subset": "subset-description"  // Optional: which visualization
+        "label": "Monthly Sales",
+        "kind": "bar",
+        "xKey": "month",
+        "yKey": "sales",
+        "style": {{
+          "showGrid": true,
+          "showLegend": true,
+          "showTooltip": true,
+          "fillColor": "#10b981",
+          "barSize": 40
+        }},
+        "data": [
+          {{"month": "Jan", "sales": 4000}},
+          {{"month": "Feb", "sales": 3000}},
+          {{"month": "Mar", "sales": 5000}},
+          {{"month": "Apr", "sales": 4500}},
+          {{"month": "May", "sales": 6000}},
+          {{"month": "Jun", "sales": 5500}}
+        ]
       }}
     }}
   ],
-  "edges": [
-    {{
-      "id": "edge-id",
-      "source": "node-id-1",
-      "target": "node-id-2"
-    }}
-  ]
+  "edges": []
 }}
 
 **Guidelines:**
 - When editing canvas, provide the COMPLETE new JSON structure
-- Position nodes logically (spread them out, don't overlap)
-- Use clear, descriptive labels
-- Explain what you're doing before using the tool
-- If user asks to add a chart, use node type "chart" and reference available data
-- Keep the conversation natural and helpful
+- Always merge existing nodes with new ones (don't delete existing nodes unless asked)
+- Position new nodes so they don't overlap with existing ones
+- Use descriptive labels and clear chart titles
+- Choose appropriate chart types for the data
+- Keep the conversation natural and explain what you're doing
 
-Be creative, helpful, and make beautiful visualizations!"""
+Be creative, helpful, and make beautiful visualizations with ALL data embedded!"""
     
     return system_prompt
 

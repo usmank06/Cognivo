@@ -3,6 +3,8 @@ uvicorn[standard]==0.32.0
 pydantic==2.9.2
 python-multipart==0.0.9
 requests==2.32.3
+anthropic==0.39.0
+python-dotenv==1.0.0
 
 # Data processing libraries (uncomment when ready to implement)
 # pandas==2.2.3

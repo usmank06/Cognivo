@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronLeft, Plus, MessageSquare, Trash2 } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Plus, MessageSquare, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ScrollArea } from '../ui/scroll-area';
@@ -31,7 +31,11 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
   const [chats, setChats] = useState<any[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
+  const [isEditingCanvas, setIsEditingCanvas] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -86,14 +90,17 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
   };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !currentCanvas || !currentChatId) return;
+    if (!inputValue.trim() || !currentCanvas || !currentChatId || isStreaming) return;
     
     const userMessage = inputValue;
     setInputValue('');
+    setIsStreaming(true);
+    setStreamingText('');
+    setIsEditingCanvas(false);
     
     try {
-      // Add user message
-      const response = await fetch(
+      // Add user message to database
+      const userMsgResponse = await fetch(
         `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/chat/${currentChatId}/message`,
         {
           method: 'POST',
@@ -102,67 +109,170 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
         }
       );
 
-      const data = await response.json();
-
-      if (data.success) {
-        // Update local state with user message
-        const updatedChats = chats.map(chat => {
-          if (chat.id === currentChatId) {
-            return {
-              ...chat,
-              messages: [...chat.messages, {
-                role: 'user' as const,
-                content: userMessage,
-                timestamp: new Date(),
-              }],
-            };
-          }
-          return chat;
-        });
-        setChats(updatedChats);
-
-        // Dummy AI response
-        setTimeout(async () => {
-          const dummyResponses = [
-            "I understand. Let me help you with that.",
-            "That's a great idea! I can assist with modifying the canvas.",
-            "I've noted that. Would you like me to make changes to the canvas?",
-            "Interesting! I can help visualize that data.",
-            "Got it! I'm here to help with your canvas.",
-            "I can help you create charts and visualizations for that.",
-            "That sounds like a useful addition to your canvas!",
-          ];
-          const randomResponse = dummyResponses[Math.floor(Math.random() * dummyResponses.length)];
-          
-          // Send assistant message to database
-          await fetch(
-            `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/chat/${currentChatId}/message`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ role: 'assistant', content: randomResponse }),
-            }
-          );
-          
-          // Update local state with assistant message
-          setChats(prevChats => prevChats.map(chat => {
-            if (chat.id === currentChatId) {
-              return {
-                ...chat,
-                messages: [...chat.messages, {
-                  role: 'assistant' as const,
-                  content: randomResponse,
-                  timestamp: new Date(),
-                }],
-              };
-            }
-            return chat;
-          }));
-        }, 500); // Half second delay to simulate thinking
+      if (!userMsgResponse.ok) {
+        throw new Error('Failed to save user message');
       }
-    } catch (error) {
-      console.error('Send message error:', error);
-      toast.error('Failed to send message');
+
+      // Update local state with user message
+      setChats(prevChats => prevChats.map(chat => {
+        if (chat.id === currentChatId) {
+          return {
+            ...chat,
+            messages: [...chat.messages, {
+              role: 'user' as const,
+              content: userMessage,
+              timestamp: new Date(),
+            }],
+          };
+        }
+        return chat;
+      }));
+
+      // Build conversation history
+      const currentChat = chats.find(c => c.id === currentChatId);
+      const conversationHistory = currentChat?.messages.map((msg: any) => ({
+        role: msg.role,
+        content: msg.content,
+      })) || [];
+      
+      // Add the new user message
+      conversationHistory.push({ role: 'user', content: userMessage });
+
+      // Create abort controller for this request
+      abortControllerRef.current = new AbortController();
+
+      // Stream AI response
+      const response = await fetch('http://localhost:3001/api/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: conversationHistory,
+          canvasId: currentCanvas.id,
+          username: username,
+        }),
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+
+      // Read stream line by line
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let assistantText = '';
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) break;
+          
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            
+            try {
+              const event = JSON.parse(line);
+              
+              switch (event.type) {
+                case 'text_delta':
+                  // Stream text word by word
+                  assistantText += event.text;
+                  setStreamingText(assistantText);
+                  break;
+                  
+                case 'tool_start':
+                  // Show "Editing canvas..." spinner
+                  setIsEditingCanvas(true);
+                  break;
+                  
+                case 'tool_finish':
+                  // Hide spinner
+                  setIsEditingCanvas(false);
+                  break;
+                  
+                case 'canvas_update':
+                  // Update canvas in database
+                  await fetch(
+                    `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/script`,
+                    {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ script: event.canvas }),
+                    }
+                  );
+                  
+                  // Reload canvas to show changes
+                  await onReloadCanvas();
+                  
+                  toast.success('Canvas updated!');
+                  break;
+                  
+                case 'done':
+                  // Stream complete
+                  setIsStreaming(false);
+                  setIsEditingCanvas(false);
+                  
+                  // Save assistant message to database
+                  if (assistantText.trim()) {
+                    await fetch(
+                      `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/chat/${currentChatId}/message`,
+                      {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ role: 'assistant', content: assistantText }),
+                      }
+                    );
+                    
+                    // Update local state
+                    setChats(prevChats => prevChats.map(chat => {
+                      if (chat.id === currentChatId) {
+                        return {
+                          ...chat,
+                          messages: [...chat.messages, {
+                            role: 'assistant' as const,
+                            content: assistantText,
+                            timestamp: new Date(),
+                          }],
+                        };
+                      }
+                      return chat;
+                    }));
+                  }
+                  
+                  setStreamingText('');
+                  break;
+                  
+                case 'error':
+                  console.error('Stream error:', event.error);
+                  toast.error(`AI Error: ${event.error}`);
+                  setIsStreaming(false);
+                  setIsEditingCanvas(false);
+                  setStreamingText('');
+                  break;
+              }
+            } catch (e) {
+              console.error('Error parsing event:', e, line);
+            }
+          }
+        }
+      }
+      
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('Stream aborted');
+      } else {
+        console.error('Send message error:', error);
+        toast.error('Failed to get AI response');
+      }
+      setIsStreaming(false);
+      setIsEditingCanvas(false);
+      setStreamingText('');
     }
   };
 
@@ -266,6 +376,22 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                           </div>
                         </div>
                       ))}
+                      
+                      {/* Streaming message */}
+                      {isStreaming && streamingText && (
+                        <div className="flex justify-start">
+                          <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted text-foreground">
+                            <p className="text-sm whitespace-pre-wrap">{streamingText}</p>
+                            {isEditingCanvas && (
+                              <div className="flex items-center gap-2 mt-2 text-xs text-blue-600">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <span>Editing canvas...</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
                       <div ref={messagesEndRef} />
                     </div>
                   ) : (
@@ -287,19 +413,28 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                     placeholder="Type a message..."
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    disabled={!currentChatId}
+                    onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                    disabled={!currentChatId || isStreaming}
                   />
                   <Button 
                     onClick={handleSendMessage}
-                    disabled={!currentChatId || !inputValue.trim()}
+                    disabled={!currentChatId || !inputValue.trim() || isStreaming}
                   >
-                    Send
+                    {isStreaming ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Send'
+                    )}
                   </Button>
                 </div>
                 {!currentChatId && (
                   <p className="text-xs text-muted-foreground mt-2 text-center">
                     Create a chat first
+                  </p>
+                )}
+                {isStreaming && (
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    AI is responding...
                   </p>
                 )}
               </div>

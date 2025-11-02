@@ -232,6 +232,65 @@ app.get('/api/canvas/:username/stats/summary', async (req, res) => {
 });
 
 // ============================================
+// AI Chat Streaming Routes
+// ============================================
+
+// Stream AI chat responses (proxy to Python API)
+app.post('/api/chat/stream', async (req, res) => {
+  try {
+    const { messages, canvasId, username } = req.body;
+    
+    // Get current canvas
+    const canvasResult = await getCanvas(canvasId, username);
+    if (!canvasResult.success) {
+      return res.status(404).json({ success: false, error: 'Canvas not found' });
+    }
+    
+    // Get user's data files
+    const filesResult = await getUserFiles(username);
+    const dataFiles = filesResult.success ? filesResult.files : [];
+    
+    // Get detailed file info for files that are completed
+    const detailedFiles = [];
+    for (const file of dataFiles) {
+      if (file.status === 'completed') {
+        const fileDetails = await getFileDetails(file.id, username);
+        if (fileDetails.success) {
+          detailedFiles.push(fileDetails.file);
+        }
+      }
+    }
+    
+    // Call Python API for streaming
+    const pythonResponse = await fetch('http://localhost:8000/api/chat/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: messages,
+        current_canvas: canvasResult.canvas.script,
+        data_sources: detailedFiles,
+      }),
+    });
+    
+    if (!pythonResponse.ok) {
+      throw new Error(`Python API returned ${pythonResponse.status}`);
+    }
+    
+    // Set headers for streaming
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    
+    // Pipe the stream from Python to client
+    pythonResponse.body.pipe(res);
+    
+  } catch (error) {
+    console.error('Chat stream error:', error);
+    res.status(500).json({ success: false, error: 'Failed to stream chat' });
+  }
+});
+
+// ============================================
 // File Management Routes
 // ============================================
 

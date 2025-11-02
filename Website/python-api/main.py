@@ -8,8 +8,13 @@ import io
 import base64
 import json
 import os
+import sys
 from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
+
+# Fix Windows console encoding for emojis
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding='utf-8')
 
 # Load environment variables
 load_dotenv()
@@ -84,6 +89,199 @@ async def health_check():
     }
 
 # ============================================
+# CLAUDE AI FILE ANALYSIS
+# ============================================
+
+async def generate_subsets_with_claude(df, file_name: str, file_type: str) -> FileProcessingResponse:
+    """
+    Use Claude AI to analyze dataframe and generate intelligent visualization subsets
+    """
+    import pandas as pd
+    import numpy as np
+    
+    if not anthropic_client:
+        raise ValueError("Anthropic API key not configured")
+    
+    try:
+        # Analyze dataframe structure
+        row_count = len(df)
+        col_count = len(df.columns)
+        
+        # Get column information
+        column_info = []
+        for col in df.columns:
+            dtype = str(df[col].dtype)
+            null_count = df[col].isnull().sum()
+            unique_count = df[col].nunique()
+            
+            # Simplify dtype names
+            if 'int' in dtype or 'float' in dtype:
+                simple_type = 'number'
+            elif 'datetime' in dtype:
+                simple_type = 'date'
+            elif 'bool' in dtype:
+                simple_type = 'boolean'
+            else:
+                simple_type = 'string'
+            
+            # Get sample values, convert datetime to string
+            sample_values = df[col].dropna().head(3).tolist() if len(df[col].dropna()) > 0 else []
+            if 'datetime' in dtype:
+                sample_values = [str(v) for v in sample_values]
+            
+            column_info.append({
+                "name": str(col),
+                "type": simple_type,
+                "dtype": dtype,
+                "null_count": int(null_count),
+                "unique_count": int(unique_count),
+                "sample_values": sample_values
+            })
+        
+        # Prepare data for Claude - sample if too large
+        MAX_ROWS = 5000
+        
+        # Convert datetime columns to strings for JSON serialization
+        df_for_json = df.copy()
+        for col in df_for_json.select_dtypes(include=['datetime64']).columns:
+            df_for_json[col] = df_for_json[col].astype(str)
+        
+        if row_count > MAX_ROWS:
+            sample_df = df_for_json.sample(n=min(1000, row_count), random_state=42)
+            data_preview = sample_df.head(50).to_dict(orient='records')
+            data_stats = df_for_json.describe(include='all').to_dict()
+        else:
+            data_preview = df_for_json.head(50).to_dict(orient='records')
+            data_stats = df_for_json.describe(include='all').to_dict()
+        
+        # Build system prompt
+        system_prompt = f"""You are an expert data visualization analyst. Your task is to analyze a dataset and create 5-15 diverse, meaningful visualization subsets.
+
+DATASET INFORMATION:
+- File: {file_name}
+- Type: {file_type}
+- Dimensions: {row_count} rows × {col_count} columns
+- Columns: {json.dumps(column_info, indent=2)}
+
+DATA PREVIEW (first 50 rows):
+{json.dumps(data_preview, indent=2, default=str)}
+
+STATISTICAL SUMMARY:
+{json.dumps(data_stats, indent=2, default=str)}
+
+YOUR TASK:
+Analyze this data and create 5-15 visualization subsets that reveal different insights. Each subset should be optimized for a specific chart type.
+
+REQUIREMENTS:
+1. Identify temporal patterns (if date/time columns exist) → line/area charts
+2. Compare categories → bar/pie charts
+3. Show distributions → bar/histogram charts
+4. Reveal correlations → scatter plots
+5. Aggregate by time periods (daily/monthly/yearly if applicable)
+6. Group by categorical dimensions
+7. Calculate meaningful metrics (sum, average, count, percentage)
+8. Create comparison views (year-over-year, category comparisons)
+9. Apply transformations where useful (growth rates, cumulative, moving averages)
+10. Ensure variety in chart types and perspectives
+
+IMPORTANT CHART TYPE GUIDANCE:
+- Line charts: Time series, trends (xKey=date/time, yKey=metric)
+- Bar charts: Category comparisons (xKey=category, yKey=value)
+- Pie charts: Part-to-whole distributions (nameKey=category, yKey=value)
+- Area charts: Cumulative trends over time (xKey=date, yKey=cumulative)
+- Scatter: Correlations between two metrics (xKey=metric1, yKey=metric2)
+- Composed: Multiple metrics on same timeline (xKey=date, yKey=primary, secondaryKey=secondary)
+
+OUTPUT FORMAT (strict JSON):
+{{
+  "file_schema": {{
+    "columns": [
+      {{"name": "column_name", "type": "number|string|date|boolean", "description": "what this column represents"}}
+    ],
+    "rowCount": {row_count},
+    "summary": "2-3 sentence overview of what this dataset contains"
+  }},
+  "subsets": [
+    {{
+      "description": "Clear description of what insight this visualization shows",
+      "xAxisName": "Short label for X-axis",
+      "xAxisDescription": "Detailed description of what X-axis represents",
+      "yAxisName": "Short label for Y-axis",
+      "yAxisDescription": "Detailed description of what Y-axis represents",
+      "dataPoints": [{{"x": "value", "y": number}}]
+    }}
+  ]
+}}
+
+CRITICAL:
+- Ensure dataPoints array contains actual data from the dataset
+- Use real column names and values
+- All numbers must be valid (no NaN or Infinity)
+- X-axis values should be strings or numbers (not complex objects)
+- Y-axis values must be numbers
+- Return ONLY valid JSON, no markdown or explanations"""
+
+        user_message = f"Please analyze this {file_type} file and generate intelligent visualization subsets as specified."
+
+        # Call Claude API
+        print(f"📊 Sending data to Claude for analysis ({row_count} rows, {col_count} columns)...")
+        
+        response = await anthropic_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=16000,
+            temperature=0.3,
+            system=system_prompt,
+            messages=[
+                {"role": "user", "content": user_message}
+            ]
+        )
+        
+        # Extract response
+        response_text = response.content[0].text
+        print(f"✅ Claude response received ({len(response_text)} chars)")
+        
+        # Parse JSON (handle markdown code blocks if present)
+        response_text = response_text.strip()
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+        response_text = response_text.strip()
+        
+        # Parse the JSON
+        result = json.loads(response_text)
+        
+        # Validate structure
+        if "file_schema" not in result or "subsets" not in result:
+            raise ValueError("Invalid response structure from Claude")
+        
+        if not isinstance(result["subsets"], list) or len(result["subsets"]) == 0:
+            raise ValueError("No subsets generated by Claude")
+        
+        # Convert to Pydantic models
+        schema = FileSchema(**result["file_schema"])
+        subsets = [DataSubset(**subset) for subset in result["subsets"]]
+        
+        print(f"✨ Successfully generated {len(subsets)} subsets")
+        
+        return FileProcessingResponse(
+            success=True,
+            file_schema=schema,
+            subsets=subsets
+        )
+        
+    except json.JSONDecodeError as e:
+        print(f"❌ Failed to parse Claude response as JSON: {str(e)}")
+        print(f"Response text: {response_text[:500]}...")
+        raise ValueError(f"Claude returned invalid JSON: {str(e)}")
+    
+    except Exception as e:
+        print(f"❌ Error in Claude analysis: {str(e)}")
+        raise
+
+# ============================================
 # FILE PROCESSING ENDPOINTS
 # ============================================
 
@@ -116,66 +314,19 @@ async def process_file(request: FileProcessingRequest):
 
 async def process_csv_file(file_bytes: bytes, file_name: str) -> FileProcessingResponse:
     """
-    Process CSV file - YOU WILL IMPLEMENT THE ACTUAL LOGIC HERE
+    Process CSV file using Claude AI to generate intelligent subsets
     """
     try:
-        # TODO: Add your actual CSV processing logic
-        # Example with pandas:
-        # import pandas as pd
-        # df = pd.read_csv(io.BytesIO(file_bytes))
-        # 
-        # Then:
-        # - Analyze columns and types
-        # - Create schema
-        # - Generate subsets (time series, distributions, correlations)
+        import pandas as pd
         
-        # For now, return dummy data to show structure
-        schema = FileSchema(
-            columns=[
-                {"name": "date", "type": "string", "description": "Transaction date"},
-                {"name": "amount", "type": "number", "description": "Purchase amount"},
-                {"name": "category", "type": "string", "description": "Purchase category"},
-            ],
-            rowCount=1500,
-            summary=f"Data extracted from {file_name}. Contains 1,500 records with dates, amounts, and categories."
-        )
+        # Read CSV file
+        df = pd.read_csv(io.BytesIO(file_bytes))
         
-        subsets = [
-            DataSubset(
-                description="Total purchases over time",
-                xAxisName="Date",
-                xAxisDescription="Transaction date (monthly aggregation)",
-                yAxisName="Total Amount",
-                yAxisDescription="Sum of all purchase amounts",
-                dataPoints=[
-                    {"x": "2024-01", "y": 45000},
-                    {"x": "2024-02", "y": 52000},
-                    {"x": "2024-03", "y": 48000},
-                    {"x": "2024-04", "y": 55000},
-                    {"x": "2024-05", "y": 51000},
-                ]
-            ),
-            DataSubset(
-                description="Purchase distribution by category",
-                xAxisName="Category",
-                xAxisDescription="Purchase categories",
-                yAxisName="Count",
-                yAxisDescription="Number of purchases in each category",
-                dataPoints=[
-                    {"x": "Electronics", "y": 250},
-                    {"x": "Groceries", "y": 380},
-                    {"x": "Clothing", "y": 180},
-                    {"x": "Entertainment", "y": 120},
-                    {"x": "Transportation", "y": 200},
-                ]
-            ),
-        ]
+        if df.empty:
+            raise ValueError("CSV file is empty")
         
-        return FileProcessingResponse(
-            success=True,
-            file_schema=schema,
-            subsets=subsets
-        )
+        # Generate subsets using Claude AI
+        return await generate_subsets_with_claude(df, file_name, "CSV")
         
     except Exception as e:
         print(f"Error processing CSV: {str(e)}")
@@ -183,48 +334,37 @@ async def process_csv_file(file_bytes: bytes, file_name: str) -> FileProcessingR
 
 async def process_excel_file(file_bytes: bytes, file_name: str) -> FileProcessingResponse:
     """
-    Process Excel file - YOU WILL IMPLEMENT THE ACTUAL LOGIC HERE
+    Process Excel file using Claude AI to generate intelligent subsets
     """
     try:
-        # TODO: Add your actual Excel processing logic
-        # Example with pandas:
-        # import pandas as pd
-        # df = pd.read_excel(io.BytesIO(file_bytes))
-        # 
-        # Then same as CSV - analyze and generate schema/subsets
+        import pandas as pd
         
-        # For now, return dummy data
-        schema = FileSchema(
-            columns=[
-                {"name": "id", "type": "number", "description": "Record ID"},
-                {"name": "name", "type": "string", "description": "Product name"},
-                {"name": "price", "type": "number", "description": "Product price"},
-            ],
-            rowCount=850,
-            summary=f"Data extracted from {file_name}. Contains 850 product records."
-        )
+        # Read Excel file (read all sheets)
+        sheets_dict = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None)
         
-        subsets = [
-            DataSubset(
-                description="Price distribution",
-                xAxisName="Price Range",
-                xAxisDescription="Product price ranges",
-                yAxisName="Count",
-                yAxisDescription="Number of products in each range",
-                dataPoints=[
-                    {"x": "$0-$50", "y": 200},
-                    {"x": "$50-$100", "y": 350},
-                    {"x": "$100-$200", "y": 180},
-                    {"x": "$200+", "y": 120},
-                ]
-            ),
-        ]
+        if not sheets_dict:
+            raise ValueError("Excel file contains no sheets")
         
-        return FileProcessingResponse(
-            success=True,
-            file_schema=schema,
-            subsets=subsets
-        )
+        # Combine all sheets into one dataframe
+        if len(sheets_dict) == 1:
+            df = list(sheets_dict.values())[0]
+            print(f"Excel has 1 sheet with {len(df)} rows")
+        else:
+            # Concatenate all sheets vertically
+            all_dfs = []
+            for sheet_name, sheet_df in sheets_dict.items():
+                # Add a column to track which sheet the data came from
+                sheet_df['_source_sheet'] = sheet_name
+                all_dfs.append(sheet_df)
+            
+            df = pd.concat(all_dfs, ignore_index=True)
+            print(f"Excel has {len(sheets_dict)} sheets, combined into {len(df)} total rows")
+        
+        if df.empty:
+            raise ValueError("Excel sheet is empty")
+        
+        # Generate subsets using Claude AI
+        return await generate_subsets_with_claude(df, file_name, "Excel")
         
     except Exception as e:
         print(f"Error processing Excel: {str(e)}")

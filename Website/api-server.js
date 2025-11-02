@@ -281,8 +281,23 @@ app.post('/api/chat/stream', async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     
-    // Pipe the stream from Python to client
-    pythonResponse.body.pipe(res);
+    // Convert Web ReadableStream to Node.js stream and pipe to client
+    const reader = pythonResponse.body.getReader();
+    const decoder = new TextDecoder();
+    
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const text = decoder.decode(value, { stream: true });
+        res.write(text);
+      }
+      res.end();
+    } catch (streamError) {
+      console.error('Stream reading error:', streamError);
+      res.end();
+    }
     
   } catch (error) {
     console.error('Chat stream error:', error);

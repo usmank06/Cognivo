@@ -1,5 +1,5 @@
 // GraphCanvas.tsx - ReactFlow wrapper for canvas visualization
-import { useCallback, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
+import { useCallback, useEffect, useRef, forwardRef, useImperativeHandle, useMemo } from 'react'
 import ReactFlow, { 
   Background, 
   Controls, 

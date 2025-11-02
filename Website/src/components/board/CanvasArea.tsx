@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Save, Download, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
+import { Save, Download, RefreshCw, ChevronUp, ChevronDown, Layout, Code, ZoomIn, ZoomOut, Maximize2, Image, FileText } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
 import type { Canvas } from '../BoardPage';
+import { GraphCanvas, GraphCanvasHandle } from './canvas/GraphCanvas';
 
 interface CanvasAreaProps {
   canvas: Canvas;
@@ -18,7 +19,9 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isTopBarCollapsed, setIsTopBarCollapsed] = useState(false);
+  const [viewMode, setViewMode] = useState<'graph' | 'code'>('graph');
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const graphCanvasRef = useRef<GraphCanvasHandle>(null);
 
   // Update local script when canvas changes
   useEffect(() => {
@@ -47,6 +50,7 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
         clearTimeout(saveTimeoutRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localScript]);
 
   const saveScript = async (scriptToSave: string) => {
@@ -89,7 +93,7 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
     saveScript(localScript);
   };
 
-  const handleExport = () => {
+  const handleExportJSON = () => {
     try {
       const blob = new Blob([localScript], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -100,9 +104,27 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success('Canvas exported!');
+      toast.success('Canvas exported as JSON!');
     } catch (error) {
       toast.error('Failed to export canvas');
+    }
+  };
+
+  const handleExportPNG = async () => {
+    try {
+      await graphCanvasRef.current?.exportPNG();
+      toast.success('Canvas exported as PNG!');
+    } catch (error) {
+      toast.error('Failed to export PNG');
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      await graphCanvasRef.current?.exportPDF();
+      toast.success('Canvas exported as PDF!');
+    } catch (error) {
+      toast.error('Failed to export PDF');
     }
   };
 
@@ -160,6 +182,69 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
           </div>
 
           <div className="flex gap-2">
+            {/* View Mode Toggle */}
+            <div className="flex gap-1 mr-2">
+              <Button 
+                variant={viewMode === 'graph' ? 'default' : 'outline'} 
+                size="sm" 
+                onClick={() => setViewMode('graph')}
+                title="Graph View"
+              >
+                <Layout className="h-4 w-4 mr-2" />
+                Graph
+              </Button>
+              <Button 
+                variant={viewMode === 'code' ? 'default' : 'outline'} 
+                size="sm" 
+                onClick={() => setViewMode('code')}
+                title="Code View"
+              >
+                <Code className="h-4 w-4 mr-2" />
+                Code
+              </Button>
+            </div>
+
+            {/* Graph-specific controls */}
+            {viewMode === 'graph' && (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => graphCanvasRef.current?.zoomIn()}
+                  title="Zoom In"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => graphCanvasRef.current?.zoomOut()}
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => graphCanvasRef.current?.fitView()}
+                  title="Fit View"
+                >
+                  <Maximize2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+
+            {/* Code-specific controls */}
+            {viewMode === 'code' && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={formatScript}
+              >
+                Format JSON
+              </Button>
+            )}
+
             <Button 
               variant="ghost" 
               size="sm" 
@@ -168,13 +253,7 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
             >
               <ChevronUp className="h-4 w-4" />
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={formatScript}
-            >
-              Format JSON
-            </Button>
+            
             <Button 
               variant="outline" 
               size="sm" 
@@ -184,14 +263,37 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
               <Save className="h-4 w-4 mr-2" />
               Save Now
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleExport}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
+
+            {/* Export dropdown */}
+            {viewMode === 'graph' ? (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleExportPNG}
+                >
+                  <Image className="h-4 w-4 mr-2" />
+                  PNG
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleExportPDF}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  PDF
+                </Button>
+              </>
+            ) : (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleExportJSON}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                JSON
+              </Button>
+            )}
           </div>
         </div>
       ) : (
@@ -238,27 +340,37 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
         </div>
       )}
 
-      {/* Script Editor */}
+      {/* Canvas Content Area */}
       <div className="flex-1 overflow-hidden p-6">
-        <div className="h-full bg-slate-900 rounded-lg overflow-hidden border border-border shadow-inner flex">
-          {/* Line numbers */}
-          <div className="bg-slate-950 px-3 py-6 text-slate-500 text-sm font-mono select-none overflow-hidden">
-            {localScript.split('\n').map((_, index) => (
-              <div key={index} className="leading-6 text-right">
-                {index + 1}
-              </div>
-            ))}
+        {viewMode === 'graph' ? (
+          <div className="h-full bg-slate-50 rounded-lg overflow-hidden border border-border shadow-inner">
+            <GraphCanvas 
+              ref={graphCanvasRef}
+              script={localScript} 
+              onChange={setLocalScript} 
+            />
           </div>
-          
-          {/* Code editor */}
-          <textarea
-            value={localScript}
-            onChange={handleScriptChange}
-            className="flex-1 bg-slate-900 text-slate-100 px-6 py-6 font-mono text-sm resize-none focus:outline-none leading-6"
-            placeholder='{"nodes": [], "edges": []}'
-            spellCheck={false}
-          />
-        </div>
+        ) : (
+          <div className="h-full bg-slate-900 rounded-lg overflow-hidden border border-border shadow-inner flex">
+            {/* Line numbers */}
+            <div className="bg-slate-950 px-3 py-6 text-slate-500 text-sm font-mono select-none overflow-hidden">
+              {localScript.split('\n').map((_, index) => (
+                <div key={index} className="leading-6 text-right">
+                  {index + 1}
+                </div>
+              ))}
+            </div>
+            
+            {/* Code editor */}
+            <textarea
+              value={localScript}
+              onChange={handleScriptChange}
+              className="flex-1 bg-slate-900 text-slate-100 px-6 py-6 font-mono text-sm resize-none focus:outline-none leading-6"
+              placeholder='{"nodes": [], "edges": []}'
+              spellCheck={false}
+            />
+          </div>
+        )}
       </div>
 
       {/* Bottom Info Bar */}

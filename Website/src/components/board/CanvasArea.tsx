@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Save, Download, RefreshCw, ChevronUp, ChevronDown, Layout, Code, ZoomIn, ZoomOut, Maximize2, Image, FileText } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
 import type { Canvas } from '../BoardPage';
 import { GraphCanvas, GraphCanvasHandle } from './canvas/GraphCanvas';
+import { FloatingCanvasToolbar } from './canvas/FloatingCanvasToolbar';
 
 interface CanvasAreaProps {
   canvas: Canvas;
@@ -16,10 +14,9 @@ interface CanvasAreaProps {
 export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasAreaProps) {
   const [localScript, setLocalScript] = useState(script);
   const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [isTopBarCollapsed, setIsTopBarCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<'graph' | 'code'>('graph');
+  const [zoomLevel, setZoomLevel] = useState(100);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const graphCanvasRef = useRef<GraphCanvasHandle>(null);
 
@@ -28,6 +25,19 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
     setLocalScript(script);
     setHasUnsavedChanges(false);
   }, [script, canvas.id]);
+
+  // Poll zoom level from ReactFlow
+  useEffect(() => {
+    if (viewMode === 'graph') {
+      const interval = setInterval(() => {
+        const zoom = graphCanvasRef.current?.getZoomLevel();
+        if (zoom !== undefined) {
+          setZoomLevel(zoom);
+        }
+      }, 200);
+      return () => clearInterval(interval);
+    }
+  }, [viewMode]);
 
   // Auto-save with debounce (2 seconds after last edit)
   useEffect(() => {
@@ -68,9 +78,9 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
       const data = await response.json();
 
       if (data.success) {
-        setLastSaved(new Date());
         setHasUnsavedChanges(false);
         onScriptChange(scriptToSave);
+        toast.success('Canvas saved successfully!');
       } else {
         toast.error('Failed to save changes');
       }
@@ -139,211 +149,37 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
     }
   };
 
-  const formatLastSaved = () => {
-    if (!lastSaved) return 'Never';
-    
-    const now = new Date();
-    const diffMs = now.getTime() - lastSaved.getTime();
-    const diffSecs = Math.floor(diffMs / 1000);
-    const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffSecs < 5) return 'Just now';
-    if (diffSecs < 60) return `${diffSecs}s ago`;
-    if (diffMins < 60) return `${diffMins}m ago`;
-    return lastSaved.toLocaleTimeString();
-  };
-
   return (
-    <div className="h-full flex flex-col bg-background">
-      {/* Collapsible Top Controls */}
-      {!isTopBarCollapsed ? (
-        <div className="flex items-center justify-between px-6 py-4 bg-card border-b border-border">
-          <div className="flex items-center gap-4">
-            <div>
-              <h2 className="text-lg font-semibold">{canvas.name}</h2>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                {isSaving ? (
-                  <>
-                    <RefreshCw className="h-3 w-3 animate-spin" />
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Last saved: {formatLastSaved()}</span>
-                    {hasUnsavedChanges && (
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 ml-2">
-                        Unsaved changes
-                      </Badge>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            {/* View Mode Toggle */}
-            <div className="flex gap-1 mr-2">
-              <Button 
-                variant={viewMode === 'graph' ? 'default' : 'outline'} 
-                size="sm" 
-                onClick={() => setViewMode('graph')}
-                title="Graph View"
-              >
-                <Layout className="h-4 w-4 mr-2" />
-                Graph
-              </Button>
-              <Button 
-                variant={viewMode === 'code' ? 'default' : 'outline'} 
-                size="sm" 
-                onClick={() => setViewMode('code')}
-                title="Code View"
-              >
-                <Code className="h-4 w-4 mr-2" />
-                Code
-              </Button>
-            </div>
-
-            {/* Graph-specific controls */}
-            {viewMode === 'graph' && (
-              <>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => graphCanvasRef.current?.zoomIn()}
-                  title="Zoom In"
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => graphCanvasRef.current?.zoomOut()}
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => graphCanvasRef.current?.fitView()}
-                  title="Fit View"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </Button>
-              </>
-            )}
-
-            {/* Code-specific controls */}
-            {viewMode === 'code' && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={formatScript}
-              >
-                Format JSON
-              </Button>
-            )}
-
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setIsTopBarCollapsed(true)}
-              title="Collapse toolbar"
-            >
-              <ChevronUp className="h-4 w-4" />
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleManualSave}
-              disabled={isSaving || !hasUnsavedChanges}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Save Now
-            </Button>
-
-            {/* Export dropdown */}
-            {viewMode === 'graph' ? (
-              <>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleExportPNG}
-                >
-                  <Image className="h-4 w-4 mr-2" />
-                  PNG
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleExportPDF}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  PDF
-                </Button>
-              </>
-            ) : (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleExportJSON}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                JSON
-              </Button>
-            )}
-          </div>
-        </div>
-      ) : (
-        // Collapsed state - minimal bar
-        <div className="flex items-center justify-between px-4 py-2 bg-card border-b border-border">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{canvas.name}</span>
-            {isSaving && (
-              <>
-                <span>•</span>
-                <RefreshCw className="h-3 w-3 animate-spin" />
-                <span>Saving...</span>
-              </>
-            )}
-            {!isSaving && hasUnsavedChanges && (
-              <>
-                <span>•</span>
-                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                  Unsaved
-                </Badge>
-              </>
-            )}
-          </div>
-          
-          <div className="flex gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleManualSave}
-              disabled={isSaving || !hasUnsavedChanges}
-              title="Save now"
-            >
-              <Save className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setIsTopBarCollapsed(false)}
-              title="Expand toolbar"
-            >
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Canvas Content Area */}
-      <div className="flex-1 overflow-hidden p-6">
+    <div className="h-full flex flex-col bg-background relative">
+      {/* Canvas Content Area - Full Height */}
+      <div className="flex-1 overflow-hidden">
         {viewMode === 'graph' ? (
-          <div className="h-full bg-slate-50 rounded-lg overflow-hidden border border-border shadow-inner">
+          <div className="h-full w-full bg-slate-50 relative">
+            {/* Floating Toolbar for Graph View */}
+            <FloatingCanvasToolbar
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              onZoomIn={() => {
+                console.log('Zoom In clicked');
+                graphCanvasRef.current?.zoomIn();
+              }}
+              onZoomOut={() => {
+                console.log('Zoom Out clicked');
+                graphCanvasRef.current?.zoomOut();
+              }}
+              onFitView={() => {
+                console.log('Fit View clicked');
+                graphCanvasRef.current?.fitView();
+              }}
+              onExportPNG={handleExportPNG}
+              onExportPDF={handleExportPDF}
+              onExportJSON={handleExportJSON}
+              onSave={handleManualSave}
+              isSaving={isSaving}
+              hasUnsavedChanges={hasUnsavedChanges}
+              zoomLevel={zoomLevel}
+            />
+            
             <GraphCanvas 
               ref={graphCanvasRef}
               script={localScript} 
@@ -351,40 +187,28 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
             />
           </div>
         ) : (
-          <div className="h-full bg-slate-900 rounded-lg overflow-hidden border border-border shadow-inner flex">
-            {/* Line numbers */}
-            <div className="bg-slate-950 px-3 py-6 text-slate-500 text-sm font-mono select-none overflow-hidden">
-              {localScript.split('\n').map((_, index) => (
-                <div key={index} className="leading-6 text-right">
-                  {index + 1}
-                </div>
-              ))}
-            </div>
+          <div className="h-full w-full bg-white relative">
+            {/* Floating Toolbar for Code View */}
+            <FloatingCanvasToolbar
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              onFormatJSON={formatScript}
+              onExportJSON={handleExportJSON}
+              onSave={handleManualSave}
+              isSaving={isSaving}
+              hasUnsavedChanges={hasUnsavedChanges}
+            />
             
             {/* Code editor */}
             <textarea
               value={localScript}
               onChange={handleScriptChange}
-              className="flex-1 bg-slate-900 text-slate-100 px-6 py-6 font-mono text-sm resize-none focus:outline-none leading-6"
+              className="w-full h-full bg-white text-slate-900 px-6 py-6 font-mono text-sm resize-none focus:outline-none leading-6 border-0"
               placeholder='{"nodes": [], "edges": []}'
               spellCheck={false}
             />
           </div>
         )}
-      </div>
-
-      {/* Bottom Info Bar */}
-      <div className="px-6 py-3 bg-card border-t border-border">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-4">
-            <span>Canvas ID: {canvas.id}</span>
-            <span>•</span>
-            <span>Chats: {canvas.chatCount || 0}</span>
-          </div>
-          <div>
-            Auto-saves 2 seconds after last edit
-          </div>
-        </div>
       </div>
     </div>
   );

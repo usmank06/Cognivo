@@ -35,6 +35,7 @@ export interface GraphCanvasHandle {
   fitView: () => void
   exportPNG: () => Promise<void>
   exportPDF: () => Promise<void>
+  getZoomLevel: () => number
 }
 
 const nodeTypes: NodeTypes = {
@@ -109,6 +110,10 @@ function GraphCanvasInner({ script, onChange }: GraphCanvasProps, ref: React.Ref
     zoomIn,
     zoomOut,
     fitView: () => fitView({ padding: 0.2 }),
+    getZoomLevel: () => {
+      const viewport = getViewport?.()
+      return viewport ? Math.round(viewport.zoom * 100) : 100
+    },
     exportPNG: async () => {
       if (nodes.length === 0) {
         alert('No content to export')
@@ -272,6 +277,9 @@ function GraphCanvasInner({ script, onChange }: GraphCanvasProps, ref: React.Ref
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.25 }}
+        minZoom={0.05}
+        maxZoom={4}
         fitView
         attributionPosition="bottom-right"
       >

@@ -137,6 +137,8 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
       
       // Add the new user message
       conversationHistory.push({ role: 'user', content: userMessage });
+      
+      console.log('📝 Sending conversation history:', conversationHistory.length, 'messages');
 
       // Create abort controller for this request
       abortControllerRef.current = new AbortController();
@@ -178,6 +180,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
             
             try {
               const event = JSON.parse(line);
+              console.log('📩 Received event:', event.type, event);
               
               switch (event.type) {
                 case 'text_delta':
@@ -188,6 +191,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                   
                 case 'tool_start':
                   // Show "Editing canvas..." spinner
+                  console.log('🔧 Tool started:', event.tool_name);
                   setIsEditingCanvas(true);
                   break;
                   
@@ -198,7 +202,11 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                   
                 case 'canvas_update':
                   // Update canvas in database
-                  await fetch(
+                  console.log('🎨 Canvas update received, saving to database...');
+                  console.log('Canvas JSON:', event.canvas);
+                  console.log('Explanation:', event.explanation);
+                  
+                  const updateResponse = await fetch(
                     `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/script`,
                     {
                       method: 'PATCH',
@@ -207,10 +215,15 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                     }
                   );
                   
-                  // Reload canvas to show changes
-                  await onReloadCanvas();
-                  
-                  toast.success('Canvas updated!');
+                  if (updateResponse.ok) {
+                    console.log('✅ Canvas saved to database, reloading...');
+                    // Reload canvas to show changes
+                    await onReloadCanvas();
+                    toast.success(`Canvas updated! ${event.explanation || ''}`);
+                  } else {
+                    console.error('❌ Failed to save canvas to database');
+                    toast.error('Failed to update canvas');
+                  }
                   break;
                   
                 case 'done':

@@ -39,6 +39,38 @@ if not ANTHROPIC_API_KEY:
 anthropic_client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
 # ============================================
+# Claude Pricing Configuration
+# ============================================
+# Claude Sonnet 4 pricing (as of 2025)
+CLAUDE_INPUT_PRICE_PER_MTOK = 1.0   # $1 per 1M input tokens
+CLAUDE_OUTPUT_PRICE_PER_MTOK = 5.0  # $5 per 1M output tokens
+
+def calculate_claude_cost(input_tokens: int, output_tokens: int) -> float:
+    """Calculate cost in USD for Claude API usage"""
+    input_cost = (input_tokens / 1_000_000) * CLAUDE_INPUT_PRICE_PER_MTOK
+    output_cost = (output_tokens / 1_000_000) * CLAUDE_OUTPUT_PRICE_PER_MTOK
+    return input_cost + output_cost
+
+async def track_token_usage(username: str, input_tokens: int, output_tokens: int):
+    """Track token usage to MongoDB via Express API"""
+    try:
+        import aiohttp
+        total_tokens = input_tokens + output_tokens
+        cost = calculate_claude_cost(input_tokens, output_tokens)
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f"http://localhost:3001/api/user/track-tokens",
+                json={"username": username, "tokens": total_tokens, "cost": cost}
+            ) as response:
+                if response.status == 200:
+                    print(f"💰 Tracked {total_tokens} tokens (${cost:.6f}) for {username}")
+                else:
+                    print(f"⚠️  Failed to track tokens: {response.status}")
+    except Exception as e:
+        print(f"❌ Error tracking tokens: {str(e)}")
+
+# ============================================
 # Data Models
 # ============================================
 
@@ -59,6 +91,7 @@ class FileProcessingRequest(BaseModel):
     fileBuffer: str  # Base64 encoded file content
     fileName: str
     fileType: str
+    username: str  # Username for token tracking
 
 class FileProcessingResponse(BaseModel):
     success: bool
@@ -74,6 +107,7 @@ class CanvasUpdateRequest(BaseModel):
     messages: List[ChatMessage]
     current_canvas: str  # JSON string of current canvas
     data_sources: List[Dict[str, Any]]  # All user's data files
+    username: str  # Username for token tracking
 
 # ============================================
 # Routes
@@ -92,7 +126,7 @@ async def health_check():
 # CLAUDE AI FILE ANALYSIS
 # ============================================
 
-async def generate_subsets_with_claude(df, file_name: str, file_type: str) -> FileProcessingResponse:
+async def generate_subsets_with_claude(df, file_name: str, file_type: str, username: str) -> FileProcessingResponse:
     """
     Use Claude AI to analyze dataframe and generate intelligent visualization subsets
     """
@@ -223,22 +257,34 @@ CRITICAL:
 
         user_message = f"Please analyze this {file_type} file and generate intelligent visualization subsets as specified."
 
-        # Call Claude API
+        # Call Claude API with streaming (required for large requests)
         print(f"📊 Sending data to Claude for analysis ({row_count} rows, {col_count} columns)...")
         
-        response = await anthropic_client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=16000,
+        response_text = ""
+        input_tokens = 0
+        output_tokens = 0
+        
+        async with anthropic_client.messages.stream(
+            model="claude-haiku-4-5",
+            max_tokens=32000,  # Large enough for comprehensive file analysis with multiple subsets
             temperature=0.3,
             system=system_prompt,
             messages=[
                 {"role": "user", "content": user_message}
             ]
-        )
+        ) as stream:
+            async for text in stream.text_stream:
+                response_text += text
+            
+            # Get final message for token usage
+            final_message = await stream.get_final_message()
+            input_tokens = final_message.usage.input_tokens
+            output_tokens = final_message.usage.output_tokens
         
-        # Extract response
-        response_text = response.content[0].text
         print(f"✅ Claude response received ({len(response_text)} chars)")
+        
+        # Track token usage
+        await track_token_usage(username, input_tokens, output_tokens)
         
         # Parse JSON (handle markdown code blocks if present)
         response_text = response_text.strip()
@@ -297,9 +343,9 @@ async def process_file(request: FileProcessingRequest):
         
         # Determine file type and process accordingly
         if request.fileType.lower().endswith('.csv') or 'csv' in request.fileType.lower():
-            result = await process_csv_file(file_bytes, request.fileName)
+            result = await process_csv_file(file_bytes, request.fileName, request.username)
         elif request.fileType.lower().endswith(('.xlsx', '.xls')) or 'spreadsheet' in request.fileType.lower() or 'excel' in request.fileType.lower():
-            result = await process_excel_file(file_bytes, request.fileName)
+            result = await process_excel_file(file_bytes, request.fileName, request.username)
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported file type: {request.fileType}")
         
@@ -312,7 +358,7 @@ async def process_file(request: FileProcessingRequest):
             error=str(e)
         )
 
-async def process_csv_file(file_bytes: bytes, file_name: str) -> FileProcessingResponse:
+async def process_csv_file(file_bytes: bytes, file_name: str, username: str) -> FileProcessingResponse:
     """
     Process CSV file using Claude AI to generate intelligent subsets
     """
@@ -326,13 +372,13 @@ async def process_csv_file(file_bytes: bytes, file_name: str) -> FileProcessingR
             raise ValueError("CSV file is empty")
         
         # Generate subsets using Claude AI
-        return await generate_subsets_with_claude(df, file_name, "CSV")
+        return await generate_subsets_with_claude(df, file_name, "CSV", username)
         
     except Exception as e:
         print(f"Error processing CSV: {str(e)}")
         raise
 
-async def process_excel_file(file_bytes: bytes, file_name: str) -> FileProcessingResponse:
+async def process_excel_file(file_bytes: bytes, file_name: str, username: str) -> FileProcessingResponse:
     """
     Process Excel file using Claude AI to generate intelligent subsets
     """
@@ -364,7 +410,7 @@ async def process_excel_file(file_bytes: bytes, file_name: str) -> FileProcessin
             raise ValueError("Excel sheet is empty")
         
         # Generate subsets using Claude AI
-        return await generate_subsets_with_claude(df, file_name, "Excel")
+        return await generate_subsets_with_claude(df, file_name, "Excel", username)
         
     except Exception as e:
         print(f"Error processing Excel: {str(e)}")
@@ -439,8 +485,8 @@ async def stream_ai_response(request: CanvasUpdateRequest) -> AsyncIterator[byte
         
         # Start streaming from Claude
         async with anthropic_client.messages.stream(
-            model="claude-sonnet-4-20250514",  # Latest Claude model
-            max_tokens=4096,
+            model="claude-haiku-4-5",  # Latest Claude model
+            max_tokens=30000,  # Increased for complex canvas operations
             system=system_prompt,
             messages=claude_messages,
             tools=tools,
@@ -457,11 +503,12 @@ async def stream_ai_response(request: CanvasUpdateRequest) -> AsyncIterator[byte
                 if event.type == "content_block_start":
                     if hasattr(event, 'content_block') and event.content_block.type == "text":
                         # Starting to stream text
-                        pass
+                        print("📝 Text block started")
                     elif hasattr(event, 'content_block') and event.content_block.type == "tool_use":
                         # Starting tool use
                         current_tool_use = event.content_block.name
                         tool_input_buffer = ""
+                        print(f"🔧 Tool use started: {current_tool_use}")
                         yield (json.dumps({
                             "type": "tool_start",
                             "tool_name": current_tool_use,
@@ -483,6 +530,44 @@ async def stream_ai_response(request: CanvasUpdateRequest) -> AsyncIterator[byte
                 elif event.type == "content_block_stop":
                     if current_tool_use == "edit_canvas" and tool_input_buffer:
                         # Tool finished - parse and send canvas update
+                        print(f"✅ Tool use finished, buffer length: {len(tool_input_buffer)}")
+                        try:
+                            tool_input = json.loads(tool_input_buffer)
+                            canvas_json = tool_input.get("canvas_json", "")
+                            explanation = tool_input.get("explanation", "")
+                            
+                            print(f"🎨 Parsed tool input - canvas length: {len(canvas_json)}")
+                            
+                            # Validate it's valid JSON
+                            json.loads(canvas_json)
+                            
+                            yield (json.dumps({
+                                "type": "canvas_update",
+                                "canvas": canvas_json,
+                                "explanation": explanation
+                            }) + "\n").encode()
+                            
+                            yield (json.dumps({
+                                "type": "tool_finish",
+                                "tool_name": "edit_canvas"
+                            }) + "\n").encode()
+                            
+                        except json.JSONDecodeError as e:
+                            print(f"❌ JSON decode error: {str(e)}")
+                            yield (json.dumps({
+                                "type": "error",
+                                "error": f"Invalid canvas JSON: {str(e)}"
+                            }) + "\n").encode()
+                        
+                        current_tool_use = None
+                        tool_input_buffer = ""
+                    else:
+                        print(f"📝 Content block stopped (tool: {current_tool_use}, buffer: {len(tool_input_buffer) if tool_input_buffer else 0})")
+                
+                elif event.type == "message_stop":
+                    # Handle any remaining tool use before finishing
+                    if current_tool_use == "edit_canvas" and tool_input_buffer:
+                        # Tool wasn't properly finished - process it now
                         try:
                             tool_input = json.loads(tool_input_buffer)
                             canvas_json = tool_input.get("canvas_json", "")
@@ -507,11 +592,7 @@ async def stream_ai_response(request: CanvasUpdateRequest) -> AsyncIterator[byte
                                 "type": "error",
                                 "error": f"Invalid canvas JSON: {str(e)}"
                             }) + "\n").encode()
-                        
-                        current_tool_use = None
-                        tool_input_buffer = ""
-                
-                elif event.type == "message_stop":
+                    
                     # Stream complete
                     usage = {}
                     if hasattr(stream, 'get_final_message'):
@@ -521,6 +602,12 @@ async def stream_ai_response(request: CanvasUpdateRequest) -> AsyncIterator[byte
                                 "input_tokens": final_msg.usage.input_tokens,
                                 "output_tokens": final_msg.usage.output_tokens,
                             }
+                            # Track token usage for this chat interaction
+                            await track_token_usage(
+                                request.username,
+                                final_msg.usage.input_tokens,
+                                final_msg.usage.output_tokens
+                            )
                     
                     yield (json.dumps({
                         "type": "done",
@@ -590,6 +677,8 @@ def build_system_prompt(current_canvas: str, data_sources: List[Dict[str, Any]])
                 full_subsets_data.append("")
     
     system_prompt = f"""You are an AI assistant helping users build data visualizations on a canvas.
+
+**YOUR PRIMARY TASK:** Whenever a user asks to add, modify, or remove visualizations, you MUST use the edit_canvas tool to make the changes. Always respond with both text explanation AND canvas edits.
 
 **Current Canvas State:**
 - Nodes: {node_count}

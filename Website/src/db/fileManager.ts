@@ -56,7 +56,8 @@ export async function uploadFile(
       fileId,
       fileBuffer,
       fileName,
-      fileType
+      fileType,
+      username  // Pass username for token tracking
     ).catch(err => {
       console.error('Background processing failed:', err);
     });

@@ -269,6 +269,7 @@ app.post('/api/chat/stream', async (req, res) => {
         messages: messages,
         current_canvas: canvasResult.canvas.script,
         data_sources: detailedFiles,
+        username: username,  // Pass username for token tracking
       }),
     });
     

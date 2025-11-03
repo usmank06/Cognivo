@@ -19,7 +19,7 @@ interface FileProcessingResult {
  * Process a file in the background
  * This runs asynchronously and updates the database as it progresses
  */
-export async function processFileInBackground(fileId: string, fileBuffer: Buffer, fileName: string, fileType: string) {
+export async function processFileInBackground(fileId: string, fileBuffer: Buffer, fileName: string, fileType: string, username: string) {
   try {
     await ensureConnected();
     
@@ -34,7 +34,7 @@ export async function processFileInBackground(fileId: string, fileBuffer: Buffer
     // Stage 3: Call Python API for processing
     await updateProcessingStatus(fileId, 'processing', 'Analyzing file structure...', 40);
     
-    const result = await callPythonAPIForProcessing(fileBuffer, fileName, fileType);
+    const result = await callPythonAPIForProcessing(fileBuffer, fileName, fileType, username);
     
     if (!result.success || !result.data) {
       throw new Error(result.error || 'Python API processing failed');
@@ -67,7 +67,8 @@ export async function processFileInBackground(fileId: string, fileBuffer: Buffer
 async function callPythonAPIForProcessing(
   fileBuffer: Buffer, 
   fileName: string, 
-  fileType: string
+  fileType: string,
+  username: string
 ): Promise<{ success: boolean; data?: FileProcessingResult; error?: string }> {
   try {
     // Convert buffer to base64 for transmission
@@ -82,6 +83,7 @@ async function callPythonAPIForProcessing(
         fileBuffer: base64Buffer,
         fileName: fileName,
         fileType: fileType,
+        username: username,  // Pass username for token tracking
       }),
     });
     

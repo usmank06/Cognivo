@@ -70,11 +70,11 @@ export function BoardPage({ username, userId }: BoardPageProps) {
       if (data.success) {
         setCanvasScript(data.canvas.script);
         // Update current canvas with full data
-        setCurrentCanvas({
-          ...currentCanvas!,
+        setCurrentCanvas(prev => ({
+          ...prev!,
           script: data.canvas.script,
           chats: data.canvas.chats,
-        });
+        }));
       }
     } catch (error) {
       console.error('Failed to load canvas details:', error);

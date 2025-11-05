@@ -85,7 +85,12 @@ The settings page automatically shows:
 Connect to MongoDB to view all users:
 ```bash
 # If using MongoDB Compass or similar
-mongodb://127.0.0.1:27017/noesis
+Your MongoDB connection string should look like:
+```
+mongodb://127.0.0.1:27017/cognivo
+```
+
+## 3. Run the Development Servers
 
 # Collections:
 # - users (active accounts)

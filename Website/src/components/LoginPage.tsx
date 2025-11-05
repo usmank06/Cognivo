@@ -40,16 +40,19 @@ export function LoginPage({ onLogin, onNavigate }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 pt-16 bg-muted/20">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl">Welcome Back</CardTitle>
-          <CardDescription>Enter your credentials to access your boards</CardDescription>
+    <div className="min-h-screen flex items-center justify-center px-4 pt-16 relative">
+      {/* Subtle gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#FFE5D1]/30 via-transparent to-transparent" />
+      
+      <Card className="w-full max-w-md relative z-10 shadow-lg border-2 rounded-2xl">
+        <CardHeader className="space-y-2 text-center pb-6">
+          <CardTitle className="text-3xl font-bold text-foreground">Welcome Back</CardTitle>
+          <CardDescription className="text-base text-muted-foreground">Enter your credentials to access your boards</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username" className="text-foreground font-medium">Username</Label>
               <Input
                 id="username"
                 type="text"
@@ -57,10 +60,11 @@ export function LoginPage({ onLogin, onNavigate }: LoginPageProps) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
+                className="rounded-lg border-2 h-11"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-foreground font-medium">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -68,11 +72,12 @@ export function LoginPage({ onLogin, onNavigate }: LoginPageProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="rounded-lg border-2 h-11"
               />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4 pt-6">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full h-11 rounded-lg font-semibold shadow-md hover:shadow-lg transition-shadow" disabled={isLoading}>
               {isLoading ? 'Logging in...' : 'Login'}
             </Button>
             <p className="text-sm text-muted-foreground text-center">
@@ -80,7 +85,7 @@ export function LoginPage({ onLogin, onNavigate }: LoginPageProps) {
               <button
                 type="button"
                 onClick={() => onNavigate('register')}
-                className="text-primary hover:underline"
+                className="text-primary font-medium hover:underline transition-colors"
               >
                 Register here
               </button>

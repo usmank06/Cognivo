@@ -1,7 +1,7 @@
 # 🎨 Graph Canvas Integration Plan
 
 **Date**: November 2, 2025  
-**Goal**: Integrate the advanced Graph + Canvas Demo system into the main DataBoard website
+**Goal**: Integrate the advanced Graph + Canvas Demo system into the main Cognivo website
 
 ---
 
@@ -927,4 +927,4 @@ This integration is **PERFECT** because:
 
 ---
 
-*Let's build this! Time to make DataBoard the most beautiful data visualization platform ever! 🚀📊✨*
+*Let's build this! Time to make Cognivo the most beautiful data visualization platform ever! 🚀📊✨*

@@ -42,16 +42,19 @@ export function RegisterPage({ onRegister, onNavigate }: RegisterPageProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 pt-16 bg-muted/20">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl">Create Account</CardTitle>
-          <CardDescription>Get started with DataBoard today</CardDescription>
+    <div className="min-h-screen flex items-center justify-center px-4 pt-16 relative">
+      {/* Subtle gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#FFE5D1]/30 via-transparent to-transparent" />
+      
+      <Card className="w-full max-w-md relative z-10 shadow-lg border-2 rounded-2xl">
+        <CardHeader className="space-y-2 text-center pb-6">
+          <CardTitle className="text-3xl font-bold text-foreground">Create Account</CardTitle>
+          <CardDescription className="text-base text-muted-foreground">Get started with Cognivo today</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-foreground font-medium">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -59,10 +62,11 @@ export function RegisterPage({ onRegister, onNavigate }: RegisterPageProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="rounded-lg border-2 h-11"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username" className="text-foreground font-medium">Username</Label>
               <Input
                 id="username"
                 type="text"
@@ -70,10 +74,11 @@ export function RegisterPage({ onRegister, onNavigate }: RegisterPageProps) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
+                className="rounded-lg border-2 h-11"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-foreground font-medium">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -81,17 +86,18 @@ export function RegisterPage({ onRegister, onNavigate }: RegisterPageProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="rounded-lg border-2 h-11"
               />
             </div>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-3">
-              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-900">
+            <div className="bg-secondary/50 border-2 border-primary/20 rounded-xl p-4 flex gap-3">
+              <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-foreground font-medium">
                 Your username and password will be required to log in. Do not forget them.
               </p>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4 pt-6">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full h-11 rounded-lg font-semibold shadow-md hover:shadow-lg transition-shadow" disabled={isLoading}>
               {isLoading ? 'Creating account...' : 'Register'}
             </Button>
             <p className="text-sm text-muted-foreground text-center">
@@ -99,7 +105,7 @@ export function RegisterPage({ onRegister, onNavigate }: RegisterPageProps) {
               <button
                 type="button"
                 onClick={() => onNavigate('login')}
-                className="text-primary hover:underline"
+                className="text-primary font-medium hover:underline transition-colors"
               >
                 Login here
               </button>

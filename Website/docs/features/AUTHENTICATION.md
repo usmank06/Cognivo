@@ -1,7 +1,7 @@
 # Authentication System
 
 ## Overview
-Simple authentication system for the DataBoard MVP. Designed for personal use with friends.
+Simple authentication system for the Cognivo platform. Designed for personal use with friends.
 
 ## Features
 - User registration with email, username, and password

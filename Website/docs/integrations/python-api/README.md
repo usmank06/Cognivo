@@ -1,4 +1,4 @@
-# Python FastAPI Server for Noesis
+# Python FastAPI Server for Cognivo
 
 ## Setup
 

@@ -25,7 +25,7 @@ export async function connectDB() {
     // Create MongoDB Memory Server with persistence
     mongoServer = await MongoMemoryServer.create({
       instance: {
-        dbName: 'noesis',
+        dbName: 'cognivo',
         storageEngine: 'wiredTiger',
         // Enable persistence - data will be stored in ./mongodb-data/
         dbPath: dbPath,

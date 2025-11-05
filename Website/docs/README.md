@@ -1,5 +1,5 @@
 
-  # Noesis
+  # Cognivo
 
   A modern data platform and collaborative workspace.
 

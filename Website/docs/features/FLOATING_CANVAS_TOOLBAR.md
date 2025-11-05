@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Floating Canvas Toolbar is a modern, minimal UI control system for the Noesis canvas editor. It replaces the previous full-width top toolbar with a sleek, floating toolbar that sits at the top-center of the canvas area.
+The Floating Canvas Toolbar is a modern, minimal UI control system for the Cognivo canvas editor. It replaces the previous full-width top toolbar with a sleek, floating toolbar that sits at the top-center of the canvas area.
 
 ## Features
 

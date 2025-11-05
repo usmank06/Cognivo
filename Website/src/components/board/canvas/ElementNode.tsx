@@ -218,7 +218,7 @@ export function ElementNode({ id, data, selected }: ElementNodeProps) {
                 <option value="bold">Bold</option>
               </select>
               
-              <div className="h-4 w-px bg-gray-200 mx-1" />
+              <div className="h-4 w-px bg-border mx-1" />
               
               <label style={{ fontSize: 11, color: '#555' }}>Text</label>
               <input 

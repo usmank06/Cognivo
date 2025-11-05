@@ -1,12 +1,12 @@
-# DataBoard MVP - Documentation Index
+# Cognivo - Documentation Index
 
-> 📚 Complete documentation for the DataBoard MVP platform
+> 📚 Complete documentation for the Cognivo platform
 
 ---
 
 ## 🚀 Quick Start
 
-**New to DataBoard?** Start here:
+**New to Cognivo?** Start here:
 
 - **[README](README.md)** - Project overview and introduction
 - **[Quick Start Guide](setup/QUICKSTART.md)** - Get up and running in 5 minutes
@@ -18,7 +18,7 @@
 
 ## 📋 Core Features
 
-Learn about DataBoard's key features:
+Learn about Cognivo's key features:
 
 - **[Authentication System](features/AUTHENTICATION.md)** - User authentication and session management
 - **[Canvas System](features/CANVAS_SYSTEM.md)** - Interactive graph canvas for data visualization

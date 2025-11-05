@@ -125,11 +125,11 @@ export function FloatingCanvasToolbar({
           "absolute top-4 left-1/2 -translate-x-1/2 z-50",
           "flex items-center gap-1",
           "bg-white",
-          "border border-border rounded-full shadow-lg",
+          "border-2 border-border rounded-full shadow-lg",
           "px-4 py-3",
           "transition-all duration-200",
           "pointer-events-auto",
-          isHovered && "shadow-xl"
+          isHovered && "shadow-xl border-primary/20"
         )}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}

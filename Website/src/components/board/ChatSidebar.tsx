@@ -296,7 +296,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
 
   if (!currentCanvas) {
     return (
-      <div className="w-12 bg-card border-r border-border flex items-center justify-center">
+      <div className="w-12 bg-white border-r border-border flex items-center justify-center">
         <Button
           variant="ghost"
           size="sm"
@@ -313,7 +313,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
     <>
       <div 
         className={`
-          bg-card border-r border-border transition-all duration-300 ease-in-out
+          bg-white border-r border-border shadow-sm transition-all duration-300 ease-in-out
           ${isExpanded ? 'w-80' : 'w-12'}
           flex flex-col h-full
         `}
@@ -376,10 +376,10 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                         >
                           <div
                             className={`
-                              max-w-[80%] rounded-lg px-4 py-2
+                              max-w-[80%] rounded-xl px-4 py-2 shadow-sm
                               ${message.role === 'user' 
                                 ? 'bg-primary text-white' 
-                                : 'bg-muted text-foreground'}
+                                : 'bg-secondary/50 text-foreground border border-border'}
                             `}
                           >
                             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -393,10 +393,10 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                       {/* Streaming message */}
                       {isStreaming && streamingText && (
                         <div className="flex justify-start">
-                          <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted text-foreground">
+                          <div className="max-w-[80%] rounded-xl px-4 py-2 bg-secondary/50 text-foreground border border-border shadow-sm">
                             <p className="text-sm whitespace-pre-wrap">{streamingText}</p>
                             {isEditingCanvas && (
-                              <div className="flex items-center gap-2 mt-2 text-xs text-blue-600">
+                              <div className="flex items-center gap-2 mt-2 text-xs text-primary font-medium">
                                 <Loader2 className="h-3 w-3 animate-spin" />
                                 <span>Editing canvas...</span>
                               </div>

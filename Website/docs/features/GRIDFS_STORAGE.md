@@ -169,10 +169,10 @@ Since GridFS data is stored in MongoDB collections, it's included in your regula
 
 ```bash
 # Backup (everything is in mongodb-data/)
-mongodump --db noesis --out ./backup
+mongodump --db cognivo --out ./backup
 
 # Restore
-mongorestore --db noesis ./backup/noesis
+mongorestore --db cognivo ./backup/cognivo
 ```
 
 ## Troubleshooting

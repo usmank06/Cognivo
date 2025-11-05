@@ -154,7 +154,7 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
       {/* Canvas Content Area - Full Height */}
       <div className="flex-1 overflow-hidden">
         {viewMode === 'graph' ? (
-          <div className="h-full w-full bg-slate-50 relative">
+          <div className="h-full w-full bg-background relative">
             {/* Floating Toolbar for Graph View */}
             <FloatingCanvasToolbar
               viewMode={viewMode}
@@ -203,7 +203,7 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
             <textarea
               value={localScript}
               onChange={handleScriptChange}
-              className="w-full h-full bg-white text-slate-900 px-6 py-6 font-mono text-sm resize-none focus:outline-none leading-6 border-0"
+              className="w-full h-full bg-background text-foreground px-6 py-6 font-mono text-sm resize-none focus:outline-none leading-6 border-0"
               placeholder='{"nodes": [], "edges": []}'
               spellCheck={false}
             />

@@ -43,16 +43,13 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
       boards: [],
       sources: [],
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `databoard-export-${Date.now()}.json`;
-    document.body.appendChild(a);
+    a.href = dataUri;
+    a.download = `cognivo-export-${Date.now()}.json`;
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success('Data downloaded successfully');
+    toast.success('Data exported successfully!');
   };
 
   const handleChangePassword = async () => {
@@ -94,11 +91,11 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
   };
 
   return (
-    <div className="pt-16 min-h-screen bg-muted/20">
+    <div className="pt-16 min-h-screen bg-background">
       <div className="max-w-3xl mx-auto px-6 py-12">
         <div className="mb-8">
-          <h1 className="text-3xl mb-2">Settings</h1>
-          <p className="text-muted-foreground">Manage your account</p>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2 text-foreground">Settings</h1>
+          <p className="text-muted-foreground text-lg">Manage your account</p>
         </div>
 
         <div className="space-y-4">
@@ -173,9 +170,9 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
           </Card>
 
           {/* Danger Zone - Compact */}
-          <Card className="border-red-200">
+          <Card className="border-2 border-red-200 bg-red-50/30">
             <CardHeader>
-              <CardTitle className="text-red-600">Danger Zone</CardTitle>
+              <CardTitle className="text-red-600 font-bold">Danger Zone</CardTitle>
             </CardHeader>
             <CardContent>
               <Button 

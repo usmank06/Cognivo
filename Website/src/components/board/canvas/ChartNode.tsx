@@ -334,7 +334,7 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
               <option value="treemap">Treemap</option>
               <option value="sankey">Sankey</option>
             </select>
-            <div className="h-4 w-px bg-gray-200 mx-1" />
+            <div className="h-4 w-px bg-border mx-1" />
             <label style={{ fontSize: 11, color: '#555' }}>xKey</label>
             <input value={xKey} onChange={(e: any) => setXKey(e.target.value)} style={{ width: 70, fontSize: 11, padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: 6 }} />
             <label style={{ fontSize: 11, color: '#555' }}>yKey</label>
@@ -360,7 +360,7 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
             
             {(kind === 'line' || kind === 'area' || kind === 'composed') && (
               <>
-                <div className="h-4 w-px bg-gray-200 mx-1" />
+                <div className="h-4 w-px bg-border mx-1" />
                 <label style={{ fontSize: 11, color: '#555' }}>Line Type</label>
                 <select value={lineType} onChange={(e: any) => updateStyle({ lineType: e.target.value as any })} style={{ fontSize: 11, padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: 6 }}>
                   <option value="monotone">Monotone</option>
@@ -380,7 +380,7 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
             
             {(kind === 'bar' || kind === 'composed') && (
               <>
-                <div className="h-4 w-px bg-gray-200 mx-1" />
+                <div className="h-4 w-px bg-border mx-1" />
                 <label style={{ fontSize: 11, color: '#555' }}>Bar Size</label>
                 <input 
                   type="number" 
@@ -400,7 +400,7 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
             
             {kind === 'pie' && (
               <>
-                <div className="h-4 w-px bg-gray-200 mx-1" />
+                <div className="h-4 w-px bg-border mx-1" />
                 <label style={{ fontSize: 11, color: '#555' }}>Inner R</label>
                 <input 
                   type="number" 

@@ -64,7 +64,7 @@ export function BoardSidebar({
     <>
       <div 
         className={`
-          bg-card border-l border-border transition-all duration-300 ease-in-out
+          bg-white border-l border-border shadow-sm transition-all duration-300 ease-in-out
           ${isExpanded ? 'w-80' : 'w-12'}
           flex flex-col
         `}
@@ -134,15 +134,15 @@ export function BoardSidebar({
                     <div
                       key={canvas.id}
                       className={`
-                        rounded-lg border transition-colors cursor-pointer overflow-hidden
+                        rounded-xl border-2 transition-all cursor-pointer overflow-hidden shadow-sm hover:shadow-md
                         ${currentCanvas?.id === canvas.id 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-border hover:border-primary/50 hover:bg-muted/50'}
+                          ? 'border-primary bg-secondary/30 shadow-md' 
+                          : 'border-border hover:border-primary/50 hover:bg-secondary/20'}
                       `}
                       onClick={() => onSelectCanvas(canvas)}
                     >
                       {/* Thumbnail */}
-                      <div className="w-full h-32 bg-slate-900 flex items-center justify-center border-b border-border">
+                      <div className="w-full h-32 bg-gradient-to-br from-[#FFE5D1] to-white flex items-center justify-center border-b border-border">
                         {canvas.thumbnail ? (
                           <img 
                             src={canvas.thumbnail} 
@@ -150,7 +150,7 @@ export function BoardSidebar({
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="flex flex-col items-center gap-2 text-slate-500">
+                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
                             <FileText className="h-8 w-8" />
                             <span className="text-xs">No preview</span>
                           </div>

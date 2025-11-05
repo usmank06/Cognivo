@@ -196,7 +196,7 @@ export function BoardPage({ username, userId }: BoardPageProps) {
   }
 
   return (
-    <div className="h-screen pt-16 flex overflow-hidden bg-background">
+    <div className="h-screen pt-16 flex overflow-hidden bg-background relative">
       <ChatSidebar 
         currentCanvas={currentCanvas}
         username={username}

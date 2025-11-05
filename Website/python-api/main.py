@@ -19,7 +19,7 @@ if sys.platform == "win32":
 # Load environment variables
 load_dotenv()
 
-app = FastAPI(title="Noesis Python API", version="1.0.0")
+app = FastAPI(title="Cognivo Python API", version="1.0.0")
 
 # CORS middleware to allow requests from your React app
 app.add_middleware(

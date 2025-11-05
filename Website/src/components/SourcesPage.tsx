@@ -243,20 +243,20 @@ export function SourcesPage({ username, userId }: SourcesPageProps) {
 
   if (isLoading) {
     return (
-      <div className="pt-16 min-h-screen bg-muted/20 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="pt-16 min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="pt-16 min-h-screen bg-muted/20">
+    <div className="pt-16 min-h-screen bg-background">
       <div className="max-w-6xl mx-auto px-6 py-12">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl mb-2">Data Files</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2 text-foreground">Data Files</h1>
+            <p className="text-muted-foreground text-lg">
               Upload and manage your data files
             </p>
           </div>
@@ -358,8 +358,8 @@ export function SourcesPage({ username, userId }: SourcesPageProps) {
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4 flex-1">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <FileText className="h-5 w-5 text-blue-600" />
+                      <div className="w-12 h-12 bg-gradient-to-br from-[#FFE5D1] to-white rounded-xl flex items-center justify-center flex-shrink-0 border border-primary/20 shadow-sm">
+                        <FileText className="h-6 w-6 text-primary" />
                       </div>
                       
                       <div className="flex-1 min-w-0">

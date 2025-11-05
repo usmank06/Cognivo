@@ -1,3 +1,8 @@
+interface MenuItem {
+  id: string;
+  label: string;
+}
+
 interface NavigationProps {
   currentPage: string;
   isLoggedIn: boolean;
@@ -19,7 +24,7 @@ export function Navigation({ currentPage, isLoggedIn, onNavigate }: NavigationPr
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-border shadow-sm">
       <div className="grid grid-cols-4 h-16">
-        {navItems.map((item, index) => (
+        {menuItems.map((item, index) => (
           <button
             key={index}
             onClick={() => item.id !== 'placeholder' && onNavigate(item.id)}

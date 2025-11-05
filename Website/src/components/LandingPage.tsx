@@ -1,4 +1,4 @@
-import { ArrowRight, Grid3x3, Database, FileText } from 'lucide-react';
+import { ArrowRight, Grid3x3, Database, FileText, Mail } from 'lucide-react';
 import { Button } from './ui/button';
 
 interface LandingPageProps {
@@ -94,15 +94,13 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
           <p className="text-lg text-muted-foreground">
             Have questions or need help? We're here for you.
           </p>
-                    <a
+          <a
             className="text-primary hover:underline"
             href="mailto:contact@cognivo.com"
           >
             <Mail className="w-5 h-5 inline mr-2" />
             contact@cognivo.com
           </a>
-        </div>
-      </section>
         </div>
       </section>
     </div>

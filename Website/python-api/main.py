@@ -648,6 +648,51 @@ def build_system_prompt(current_canvas: str, data_sources: List[Dict[str, Any]])
             f"- {file_name}: {len(columns)} columns, {row_count} rows, {len(subsets)} pre-generated visualizations"
         )
     
+    # Parse raw file data and include FULL spreadsheet data
+    full_raw_data = []
+    for ds in data_sources:
+        file_name = ds.get("originalFileName", "Unknown")
+        raw_file_data = ds.get("rawFileData")
+        
+        if raw_file_data:
+            file_buffer = raw_file_data.get("fileBuffer")
+            file_type = raw_file_data.get("fileType", "")
+            
+            if file_buffer:
+                try:
+                    import pandas as pd
+                    
+                    # Decode base64 buffer
+                    file_bytes = base64.b64decode(file_buffer)
+                    
+                    full_raw_data.append(f"\n**RAW FILE DATA: {file_name}**")
+                    
+                    # Parse based on file type
+                    if 'csv' in file_type.lower() or file_name.lower().endswith('.csv'):
+                        df = pd.read_csv(io.BytesIO(file_bytes))
+                        full_raw_data.append(f"Format: CSV")
+                        full_raw_data.append(f"Rows: {len(df)}, Columns: {len(df.columns)}")
+                        full_raw_data.append(f"Column Names: {list(df.columns)}")
+                        full_raw_data.append(f"\nFULL DATA (all {len(df)} rows):")
+                        full_raw_data.append(df.to_json(orient='records', date_format='iso'))
+                        
+                    elif 'excel' in file_type.lower() or 'spreadsheet' in file_type.lower() or file_name.lower().endswith(('.xlsx', '.xls')):
+                        # Read all sheets
+                        sheets_dict = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None)
+                        
+                        full_raw_data.append(f"Format: Excel")
+                        full_raw_data.append(f"Total Sheets: {len(sheets_dict)}")
+                        
+                        for sheet_name, sheet_df in sheets_dict.items():
+                            full_raw_data.append(f"\n--- SHEET: {sheet_name} ---")
+                            full_raw_data.append(f"Rows: {len(sheet_df)}, Columns: {len(sheet_df.columns)}")
+                            full_raw_data.append(f"Column Names: {list(sheet_df.columns)}")
+                            full_raw_data.append(f"\nFULL DATA (all {len(sheet_df)} rows):")
+                            full_raw_data.append(sheet_df.to_json(orient='records', date_format='iso'))
+                        
+                except Exception as e:
+                    full_raw_data.append(f"Error parsing raw data: {str(e)}")
+    
     # Include FULL data from ALL subsets in context
     full_subsets_data = []
     for ds in data_sources:
@@ -687,6 +732,9 @@ def build_system_prompt(current_canvas: str, data_sources: List[Dict[str, Any]])
 
 **Available Data Sources:**
 {chr(10).join(data_summary) if data_summary else "No data sources uploaded yet"}
+
+**COMPLETE RAW FILE DATA (ALL SHEETS, ALL ROWS):**
+{chr(10).join(full_raw_data) if full_raw_data else "No raw data available"}
 
 **Pre-generated Subsets with FULL DATA:**
 {chr(10).join(full_subsets_data) if full_subsets_data else "No subsets available yet"}
@@ -760,12 +808,13 @@ When creating chart nodes, you MUST embed ALL data directly in the node. DO NOT 
 
 **IMPORTANT RULES:**
 1. **Embed data**: ALWAYS include the full "data" array with all data points in the chart node
-2. **Max 500 rows**: Data is small enough to embed completely
-3. **Use subsets**: Pick appropriate pre-generated subsets from the available data sources
-4. **Copy data points**: Take the dataPoints array from a subset and put it in the chart's data field
-5. **Match keys**: Ensure xKey and yKey match the field names in your data array
-6. **Position wisely**: Spread nodes out (x: 0, 440, 880, etc. y: increment by 300-400)
-7. **Include styling**: Always set width/height in style, and chart styling in data.style
+2. **Complete access**: You have the COMPLETE raw spreadsheet data (all sheets, all rows) provided above in COMPLETE RAW FILE DATA section
+3. **Use raw data**: You can transform and use the raw data directly, or use the pre-generated subsets - you have everything!
+4. **All sheets available**: For Excel files, ALL sheets are provided separately - you can create visualizations from ANY sheet
+5. **Custom aggregations**: You can aggregate, filter, group, or transform the raw data however you want before creating visualizations
+6. **Match keys**: Ensure xKey and yKey match the field names in your data array
+7. **Position wisely**: Spread nodes out (x: 0, 440, 880, etc. y: increment by 300-400)
+8. **Include styling**: Always set width/height in style, and chart styling in data.style
 
 **Example - Adding a Bar Chart:**
 User: "Add a bar chart showing sales by month"

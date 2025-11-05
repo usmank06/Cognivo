@@ -19,6 +19,7 @@ import {
   getFileStatus,
   getUserFileStats,
   downloadFile,
+  getFileDataForAI,
 } from './src/db/fileManager.ts';
 import {
   createCanvas,
@@ -250,13 +251,23 @@ app.post('/api/chat/stream', async (req, res) => {
     const filesResult = await getUserFiles(username);
     const dataFiles = filesResult.success ? filesResult.files : [];
     
-    // Get detailed file info for files that are completed
+    // Get detailed file info AND raw data for files that are completed
     const detailedFiles = [];
     for (const file of dataFiles) {
       if (file.status === 'completed') {
         const fileDetails = await getFileDetails(file.id, username);
         if (fileDetails.success) {
-          detailedFiles.push(fileDetails.file);
+          // Get raw file data from GridFS
+          const rawData = await getFileDataForAI(file.id, username);
+          
+          detailedFiles.push({
+            ...fileDetails.file,
+            rawFileData: rawData.success ? {
+              fileName: rawData.fileName,
+              fileType: rawData.fileType,
+              fileBuffer: rawData.fileBuffer,
+            } : null,
+          });
         }
       }
     }

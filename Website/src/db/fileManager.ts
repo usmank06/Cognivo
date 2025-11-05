@@ -322,3 +322,31 @@ export async function getFileBuffer(gridfsFileId: any): Promise<Buffer> {
       .on('end', () => resolve(Buffer.concat(chunks)));
   });
 }
+
+/**
+ * Get raw file data for AI chat (reads from GridFS)
+ */
+export async function getFileDataForAI(fileId: string, username: string) {
+  try {
+    await ensureConnected();
+    
+    const file = await DataFile.findOne({ _id: fileId, username });
+    
+    if (!file || !file.gridfsFileId) {
+      return { success: false, error: 'File not found' };
+    }
+    
+    // Get file buffer from GridFS
+    const buffer = await getFileBuffer(file.gridfsFileId);
+    
+    return {
+      success: true,
+      fileName: file.originalFileName,
+      fileType: file.fileType,
+      fileBuffer: buffer.toString('base64'), // Convert to base64 for JSON transport
+    };
+  } catch (error) {
+    console.error('Get file data for AI error:', error);
+    return { success: false, error: 'Failed to get file data' };
+  }
+}

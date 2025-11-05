@@ -45,7 +45,7 @@ export function LoginPage({ onLogin, onNavigate }: LoginPageProps) {
       <div className="absolute inset-0 bg-gradient-to-br from-[#FFE5D1]/30 via-transparent to-transparent" />
       
       <Card className="w-full max-w-md relative z-10 shadow-lg border-2 rounded-2xl">
-        <CardHeader className="space-y-2 text-center pb-6">
+        <CardHeader className="space-y-2 text-center pb-4">
           <CardTitle className="text-3xl font-bold text-foreground">Welcome Back</CardTitle>
           <CardDescription className="text-base text-muted-foreground">Enter your credentials to access your boards</CardDescription>
         </CardHeader>
@@ -63,8 +63,8 @@ export function LoginPage({ onLogin, onNavigate }: LoginPageProps) {
                 className="rounded-lg border-2 h-11"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground font-medium">Password</Label>
+            <div className="space-y-2 pt-4">
+              <Label htmlFor="password" className="text-foreground font-medium pt-6 block">Password</Label>
               <Input
                 id="password"
                 type="password"

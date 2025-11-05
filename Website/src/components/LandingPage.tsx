@@ -18,19 +18,19 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             <span className="text-primary">Cognivo</span>
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-normal">
-            Transform your data into interactive visual boards. Connect sources, analyze insights, and collaborate seamlessly.
+            Transform your data into interactive visual boards. Connect sources and uncover insights effortlessly.
           </p>
-          <div className="flex gap-4 justify-center pt-6">
+          <div className="flex gap-4 justify-center items-center pt-2">
             <Button 
               onClick={() => onNavigate('login')}
-              className="px-8 py-6 text-base rounded-lg font-semibold shadow-md hover:shadow-lg transition-shadow"
+              className="px-8 py-4 text-base rounded-lg font-semibold shadow-md hover:shadow-lg transition-shadow h-auto"
             >
               Login
             </Button>
             <Button 
               onClick={() => onNavigate('register')}
               variant="outline"
-              className="px-8 py-6 text-base rounded-lg font-semibold border-2 hover:bg-secondary/50 transition-colors"
+              className="px-8 py-4 text-base rounded-lg font-semibold border-2 hover:bg-secondary/50 transition-colors h-auto"
             >
               Get Started <ArrowRight className="ml-2 h-4 w-4" />
             </Button>

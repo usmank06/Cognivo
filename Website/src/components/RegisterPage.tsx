@@ -47,7 +47,7 @@ export function RegisterPage({ onRegister, onNavigate }: RegisterPageProps) {
       <div className="absolute inset-0 bg-gradient-to-br from-[#FFE5D1]/30 via-transparent to-transparent" />
       
       <Card className="w-full max-w-md relative z-10 shadow-lg border-2 rounded-2xl">
-        <CardHeader className="space-y-2 text-center pb-6">
+        <CardHeader className="space-y-2 text-center">
           <CardTitle className="text-3xl font-bold text-foreground">Create Account</CardTitle>
           <CardDescription className="text-base text-muted-foreground">Get started with Cognivo today</CardDescription>
         </CardHeader>
@@ -65,8 +65,8 @@ export function RegisterPage({ onRegister, onNavigate }: RegisterPageProps) {
                 className="rounded-lg border-2 h-11"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-foreground font-medium">Username</Label>
+            <div className="space-y-2 pt-4">
+              <Label htmlFor="username" className="text-foreground font-medium pt-6 block">Username</Label>
               <Input
                 id="username"
                 type="text"
@@ -77,8 +77,8 @@ export function RegisterPage({ onRegister, onNavigate }: RegisterPageProps) {
                 className="rounded-lg border-2 h-11"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground font-medium">Password</Label>
+            <div className="space-y-2 pt-4">
+              <Label htmlFor="password" className="text-foreground font-medium pt-6 block">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -89,11 +89,13 @@ export function RegisterPage({ onRegister, onNavigate }: RegisterPageProps) {
                 className="rounded-lg border-2 h-11"
               />
             </div>
-            <div className="bg-secondary/50 border-2 border-primary/20 rounded-xl p-4 flex gap-3">
-              <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-foreground font-medium">
-                Your username and password will be required to log in. Do not forget them.
-              </p>
+            <div className="pt-4">
+              <div className="bg-secondary/50 border-2 border-primary/20 rounded-xl p-4 flex gap-3 mt-8">
+                <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-foreground font-medium">
+                  Your username and password will be required to log in. Do not forget them.
+                </p>
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4 pt-6">

@@ -335,12 +335,14 @@ export function SourcesPage({ username, userId }: SourcesPageProps) {
               <p className="text-muted-foreground mb-6">
                 Upload your first CSV or Excel file to get started
               </p>
-              <label htmlFor="file-upload-empty">
-                <Button onClick={() => document.getElementById('file-upload-empty')?.click()}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Files
-                </Button>
-              </label>
+              <div className="mt-4">
+                <label htmlFor="file-upload-empty">
+                  <Button onClick={() => document.getElementById('file-upload-empty')?.click()}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Files
+                  </Button>
+                </label>
+              </div>
               <input
                 id="file-upload-empty"
                 type="file"

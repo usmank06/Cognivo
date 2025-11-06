@@ -6,6 +6,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
 import type { Canvas } from '../CanvasPage';
 
 interface Message {
@@ -36,9 +37,11 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [isEditingCanvas, setIsEditingCanvas] = useState(false);
+  const [canvasEditEvents, setCanvasEditEvents] = useState<Array<{ duration: number; timestamp: Date; messageIndex: number }>>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const canvasEditStartTime = useRef<number | null>(null);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -64,10 +67,10 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
     };
   }, [isResizing]);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom when messages change or when editing canvas
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chats, currentChatId]);
+  }, [chats, currentChatId, isEditingCanvas, canvasEditEvents]);
 
   // Load chats when canvas changes
   useEffect(() => {
@@ -84,6 +87,36 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
       setCurrentChatId(null);
     }
   }, [currentCanvas]);
+
+  // Load canvas edit events from localStorage when chat changes
+  useEffect(() => {
+    if (currentCanvas && currentChatId) {
+      const key = `canvas-edits-${currentCanvas.id}-${currentChatId}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setCanvasEditEvents(parsed.map((e: any) => ({
+            ...e,
+            timestamp: new Date(e.timestamp)
+          })));
+        } catch (e) {
+          console.error('Failed to load canvas edit events:', e);
+          setCanvasEditEvents([]);
+        }
+      } else {
+        setCanvasEditEvents([]);
+      }
+    }
+  }, [currentCanvas?.id, currentChatId]);
+
+  // Save canvas edit events to localStorage whenever they change
+  useEffect(() => {
+    if (currentCanvas && currentChatId && canvasEditEvents.length > 0) {
+      const key = `canvas-edits-${currentCanvas.id}-${currentChatId}`;
+      localStorage.setItem(key, JSON.stringify(canvasEditEvents));
+    }
+  }, [canvasEditEvents, currentCanvas?.id, currentChatId]);
 
   const getCurrentChat = () => {
     return chats.find(c => c.id === currentChatId);
@@ -220,6 +253,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                   // Show "Editing canvas..." spinner
                   console.log('🔧 Tool started:', event.tool_name);
                   setIsEditingCanvas(true);
+                  canvasEditStartTime.current = Date.now();
                   break;
                   
                 case 'tool_finish':
@@ -244,13 +278,23 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                   
                   if (updateResponse.ok) {
                     console.log('✅ Canvas saved to database, reloading...');
+                    // Calculate duration
+                    const duration = canvasEditStartTime.current 
+                      ? Math.round((Date.now() - canvasEditStartTime.current) / 1000) 
+                      : 0;
+                    
+                    // Store duration temporarily to be used when assistant message is added
+                    canvasEditStartTime.current = duration as any; // Store as duration instead of start time
+                    
                     // Reload canvas to show changes
                     await onReloadCanvas();
-                    toast.success(`Canvas updated! ${event.explanation || ''}`);
+                    toast.success('Canvas updated');
                   } else {
                     console.error('❌ Failed to save canvas to database');
                     toast.error('Failed to update canvas');
                   }
+                  
+                  setIsEditingCanvas(false);
                   break;
                   
                 case 'done':
@@ -283,6 +327,27 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                       }
                       return chat;
                     }));
+                    
+                    // If we have a canvas edit duration stored, add it now after the assistant message
+                    if (typeof canvasEditStartTime.current === 'number' && canvasEditStartTime.current > 0) {
+                      // Use setTimeout to ensure state update has completed
+                      setTimeout(() => {
+                        setChats(currentChats => {
+                          const currentChat = currentChats.find(c => c.id === currentChatId);
+                          const messageIndex = currentChat ? currentChat.messages.length : 0;
+                          
+                          setCanvasEditEvents(prev => [...prev, {
+                            duration: canvasEditStartTime.current as number,
+                            timestamp: new Date(),
+                            messageIndex,
+                          }]);
+                          
+                          return currentChats;
+                        });
+                        
+                        canvasEditStartTime.current = null;
+                      }, 100);
+                    }
                   }
                   
                   setStreamingText('');
@@ -440,24 +505,60 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                 <div className="p-4">
                   {currentChatId && getCurrentChat() ? (
                     <div className="space-y-4">
-                      {getCurrentChat()!.messages.map((message, index) => (
-                        <div
-                          key={index}
-                          className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                        >
+                      {getCurrentChat()!.messages.map((message: Message, index: number) => (
+                        <div key={index}>
+                          {/* Regular message */}
                           <div
-                            className={`
-                              max-w-[80%] rounded-xl px-4 py-2 shadow-sm
-                              ${message.role === 'user' 
-                                ? 'bg-primary text-white' 
-                                : 'bg-secondary/50 text-foreground border border-border'}
-                            `}
+                            className={`flex ${
+                              message.role === 'user' 
+                                ? 'justify-end' 
+                                : 'justify-start'
+                            }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                            <span className="text-xs opacity-70 mt-1 block">
-                              {formatChatTime(message.timestamp)}
-                            </span>
+                            <div
+                              className={`
+                                max-w-[80%] rounded-xl px-4 py-2 shadow-sm
+                                ${message.role === 'user' 
+                                  ? 'bg-primary text-white' 
+                                  : 'bg-secondary/50 text-foreground border border-border'}
+                              `}
+                            >
+                              <div className="text-sm">
+                                <ReactMarkdown
+                                  components={{
+                                    p: ({ children }) => <p className="text-sm whitespace-pre-wrap my-1 first:mt-0 last:mb-0">{children}</p>,
+                                    ul: ({ children }) => <ul className="text-sm list-disc ml-4 my-1 space-y-0.5">{children}</ul>,
+                                    ol: ({ children }) => <ol className="text-sm list-decimal ml-4 my-1 space-y-0.5">{children}</ol>,
+                                    li: ({ children }) => <li className="text-sm">{children}</li>,
+                                    strong: ({ children }) => <strong className="text-sm font-semibold">{children}</strong>,
+                                    em: ({ children }) => <em className="text-sm italic">{children}</em>,
+                                    code: ({ children }) => <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                                  }}
+                                >
+                                  {message.content}
+                                </ReactMarkdown>
+                              </div>
+                              {/* <span className="text-xs opacity-70 mt-1 block">
+                                {formatChatTime(message.timestamp)}
+                              </span> */}
+                            </div>
                           </div>
+                          
+                          {/* Canvas edit event after this message (if any) */}
+                          {canvasEditEvents
+                            .filter(event => event.messageIndex === index + 1)
+                            .map((event, eventIdx) => (
+                              <div key={`edit-${eventIdx}`} className="flex justify-center" style={{ marginTop: '24px' }}>
+                                <div style={{ width: '85%', paddingTop: '16px', paddingBottom: '16px' }} className="rounded-lg px-4 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/20 shadow-sm">
+                                  <div className="flex items-center justify-center gap-3">
+                                    <div className="text-center">
+                                      <p className="text-sm font-medium text-primary">Canvas edited</p>
+                                      <p className="text-xs text-muted-foreground mt-0.5">Completed in {event.duration}s</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                         </div>
                       ))}
                       
@@ -465,13 +566,39 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                       {isStreaming && streamingText && (
                         <div className="flex justify-start">
                           <div className="max-w-[80%] rounded-xl px-4 py-2 bg-secondary/50 text-foreground border border-border shadow-sm">
-                            <p className="text-sm whitespace-pre-wrap">{streamingText}</p>
-                            {isEditingCanvas && (
-                              <div className="flex items-center gap-2 mt-2 text-xs text-primary font-medium">
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                                <span>Editing canvas...</span>
+                            <div className="text-sm">
+                              <ReactMarkdown
+                                components={{
+                                  p: ({ children }) => <p className="text-sm whitespace-pre-wrap my-1 first:mt-0 last:mb-0">{children}</p>,
+                                  ul: ({ children }) => <ul className="text-sm list-disc ml-4 my-1 space-y-0.5">{children}</ul>,
+                                  ol: ({ children }) => <ol className="text-sm list-decimal ml-4 my-1 space-y-0.5">{children}</ol>,
+                                  li: ({ children }) => <li className="text-sm">{children}</li>,
+                                  strong: ({ children }) => <strong className="text-sm font-semibold">{children}</strong>,
+                                  em: ({ children }) => <em className="text-sm italic">{children}</em>,
+                                  code: ({ children }) => <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                                }}
+                              >
+                                {streamingText}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Active canvas editing indicator */}
+                      {isEditingCanvas && (
+                        <div className="flex justify-center" style={{ marginTop: '24px' }}>
+                          <div style={{ width: '85%', paddingTop: '16px', paddingBottom: '16px' }} className="rounded-lg px-4 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/20 shadow-sm animate-pulse">
+                            <div className="flex items-center justify-center gap-3">
+                              <div className="relative">
+                                <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                                <div className="absolute inset-0 h-5 w-5 rounded-full bg-primary/20 animate-ping" />
                               </div>
-                            )}
+                              <div className="text-center">
+                                <p className="text-sm font-medium text-primary">Editing canvas</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Applying changes...</p>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}

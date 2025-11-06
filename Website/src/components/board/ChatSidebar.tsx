@@ -296,7 +296,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
 
   if (!currentCanvas) {
     return (
-      <div className="w-12 bg-white border-r border-border flex items-center justify-center">
+      <div className="w-12 bg-background border-r border-border flex items-center justify-center">
         <Button
           variant="ghost"
           size="sm"
@@ -313,7 +313,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
     <>
       <div 
         className={`
-          bg-white border-r border-border shadow-sm transition-all duration-300 ease-in-out
+          bg-background border-r border-border shadow-sm transition-all duration-300 ease-in-out
           ${isExpanded ? 'w-80' : 'w-12'}
           flex flex-col h-full
         `}

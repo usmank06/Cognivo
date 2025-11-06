@@ -269,7 +269,7 @@ function GraphCanvasInner({ script, onChange }: GraphCanvasProps, ref: React.Ref
   }), [zoomIn, zoomOut, fitView, nodes, getViewport])
 
   return (
-    <div ref={flowRef} style={{ width: '100%', height: '100%' }}>
+    <div ref={flowRef} style={{ width: '100%', height: '100%', backgroundColor: '#ffffff' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -282,9 +282,9 @@ function GraphCanvasInner({ script, onChange }: GraphCanvasProps, ref: React.Ref
         maxZoom={4}
         fitView
         attributionPosition="bottom-right"
+        style={{ backgroundColor: '#ffffff' }}
       >
-        <Background />
-        <Controls />
+        <Background color="#e5e7eb" />
         <MiniMap 
           nodeStrokeWidth={3}
           zoomable

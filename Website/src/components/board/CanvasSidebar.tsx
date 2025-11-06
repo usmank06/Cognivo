@@ -64,7 +64,7 @@ export function CanvasSidebar({
     <>
       <div 
         className={`
-          bg-white border-l border-border shadow-sm transition-all duration-300 ease-in-out
+          bg-background border-l border-border shadow-sm transition-all duration-300 ease-in-out
           ${isExpanded ? 'w-80' : 'w-12'}
           flex flex-col
         `}

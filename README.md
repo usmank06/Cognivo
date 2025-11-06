@@ -10,7 +10,7 @@ Transform your spreadsheets into intelligent, interactive visualizations using t
 *Clean, modern interface for data visualization*
 
 ### Interactive Dashboard
-![Interactive Canvas Dashboard](./Media/dashboard.png)
+![Interactive Canvas Dashboard](./Media/dashboard.gif)
 *AI-generated visualizations from uploaded CSV/Excel files*
 
 ## 🎥 Demo Video

@@ -62,21 +62,27 @@ export async function getUserCanvases(username: string) {
     
     const canvases = await Canvas.find({ username }).sort({ updatedAt: -1 });
     
+    console.log('📚 [GET CANVASES] Found', canvases.length, 'canvases for', username);
+    
     return { 
       success: true, 
-      canvases: canvases.map(c => ({
-        id: c._id.toString(),
-        name: c.name,
-        thumbnail: c.thumbnail,
-        script: c.script,
-        createdAt: c.createdAt,
-        updatedAt: c.updatedAt,
-        lastAccessedAt: c.lastAccessedAt,
-        chatCount: c.chats.length,
-      }))
+      canvases: canvases.map(c => {
+        console.log('📋 [GET CANVASES] Canvas', c._id.toString(), 'has', c.chats.length, 'chats');
+        return {
+          id: c._id.toString(),
+          name: c.name,
+          thumbnail: c.thumbnail,
+          script: c.script,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+          lastAccessedAt: c.lastAccessedAt,
+          chatCount: c.chats.length,
+          chats: c.chats, // Include full chat data
+        };
+      })
     };
   } catch (error) {
-    console.error('Get user canvases error:', error);
+    console.error('❌ [GET CANVASES] Error:', error);
     return { success: false, error: 'Failed to get canvases' };
   }
 }
@@ -91,8 +97,13 @@ export async function getCanvas(canvasId: string, username: string) {
     const canvas = await Canvas.findOne({ _id: canvasId, username });
     
     if (!canvas) {
+      console.log('❌ [GET CANVAS] Canvas not found:', canvasId);
       return { success: false, error: 'Canvas not found' };
     }
+    
+    console.log('✅ [GET CANVAS] Found canvas:', canvasId);
+    console.log('📊 [GET CANVAS] Canvas has', canvas.chats.length, 'chats');
+    console.log('📋 [GET CANVAS] Chat IDs:', canvas.chats.map(c => c.id));
     
     // Update last accessed
     canvas.lastAccessedAt = new Date();
@@ -112,7 +123,7 @@ export async function getCanvas(canvasId: string, username: string) {
       }
     };
   } catch (error) {
-    console.error('Get canvas error:', error);
+    console.error('❌ [GET CANVAS] Error:', error);
     return { success: false, error: 'Failed to get canvas' };
   }
 }
@@ -226,8 +237,12 @@ export async function addChatToCanvas(
     const canvas = await Canvas.findOne({ _id: canvasId, username });
     
     if (!canvas) {
+      console.log('❌ [ADD CHAT] Canvas not found:', canvasId);
       return { success: false, error: 'Canvas not found' };
     }
+    
+    console.log('🆕 [ADD CHAT] Adding chat to canvas:', canvasId);
+    console.log('📊 [ADD CHAT] Current chat count:', canvas.chats.length);
     
     const newChat: IChat = {
       id: `chat-${Date.now()}`,
@@ -238,12 +253,15 @@ export async function addChatToCanvas(
     canvas.chats.push(newChat);
     await canvas.save();
     
+    console.log('✅ [ADD CHAT] Chat created with ID:', newChat.id);
+    console.log('📊 [ADD CHAT] New chat count:', canvas.chats.length);
+    
     return { 
       success: true,
       chatId: newChat.id,
     };
   } catch (error) {
-    console.error('Add chat error:', error);
+    console.error('❌ [ADD CHAT] Error:', error);
     return { success: false, error: 'Failed to add chat' };
   }
 }
@@ -264,14 +282,20 @@ export async function addMessageToChat(
     const canvas = await Canvas.findOne({ _id: canvasId, username });
     
     if (!canvas) {
+      console.log('❌ [ADD MSG] Canvas not found:', canvasId);
       return { success: false, error: 'Canvas not found' };
     }
     
     const chat = canvas.chats.find(c => c.id === chatId);
     
     if (!chat) {
+      console.log('❌ [ADD MSG] Chat not found:', chatId);
+      console.log('📋 [ADD MSG] Available chats:', canvas.chats.map(c => c.id));
       return { success: false, error: 'Chat not found' };
     }
+    
+    console.log('💬 [ADD MSG] Adding', role, 'message to chat:', chatId);
+    console.log('📊 [ADD MSG] Current message count:', chat.messages.length);
     
     const message: IChatMessage = {
       role,
@@ -283,9 +307,11 @@ export async function addMessageToChat(
     canvas.updatedAt = new Date();
     await canvas.save();
     
+    console.log('✅ [ADD MSG] Message saved. New count:', chat.messages.length);
+    
     return { success: true };
   } catch (error) {
-    console.error('Add message error:', error);
+    console.error('❌ [ADD MSG] Error:', error);
     return { success: false, error: 'Failed to add message' };
   }
 }

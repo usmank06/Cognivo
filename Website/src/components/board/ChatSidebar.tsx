@@ -47,6 +47,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
   const [streamingText, setStreamingText] = useState('');
   const [isEditingCanvas, setIsEditingCanvas] = useState(false);
   const [canvasEditEvents, setCanvasEditEvents] = useState<Array<{ duration: number; timestamp: Date; messageIndex: number }>>([]);
+  const [isCreatingInitialChat, setIsCreatingInitialChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -96,11 +97,14 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
     const initializeChats = async () => {
       if (currentCanvas) {
         const chatArray = currentCanvas.chats || [];
-        console.log('🔄 Loading chats for canvas:', currentCanvas.id, 'Chat count:', chatArray.length);
+        console.log('🔄 [CHAT INIT] Loading chats for canvas:', currentCanvas.id);
+        console.log('📊 [CHAT INIT] Canvas has', chatArray.length, 'chats in DB');
+        console.log('📋 [CHAT INIT] Chat IDs:', chatArray.map(c => c.id));
         
-        // If no chats exist, create one immediately
-        if (chatArray.length === 0) {
-          console.log('⚡ No chats found, creating one now...');
+        // If no chats exist AND we're not already creating one, create one immediately
+        if (chatArray.length === 0 && !isCreatingInitialChat) {
+          console.log('⚡ [CHAT INIT] No chats found, creating one now...');
+          setIsCreatingInitialChat(true);
           try {
             const response = await fetch(
               `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/chat`,
@@ -109,6 +113,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
             const data = await response.json();
             
             if (data.success) {
+              console.log('✅ [CHAT INIT] Initial chat created with ID:', data.chatId);
               const newChat: Chat = {
                 id: data.chatId,
                 messages: [],
@@ -116,27 +121,48 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
               };
               setChats([newChat]);
               setCurrentChatId(data.chatId);
-              console.log('✅ Initial chat created:', data.chatId);
               
-              // Reload canvas to update the UI
+              // Reload canvas to update the UI (this will cause this effect to run again but with chats present)
               onReloadCanvas();
+            } else {
+              console.error('❌ [CHAT INIT] Failed to create chat:', data.error);
+              setIsCreatingInitialChat(false);
             }
           } catch (error) {
-            console.error('Failed to create initial chat:', error);
+            console.error('❌ [CHAT INIT] Failed to create initial chat:', error);
+            setIsCreatingInitialChat(false);
           }
-        } else {
+        } else if (chatArray.length > 0) {
           // Normal case: chats exist, just load them
+          console.log('✅ [CHAT INIT] Loading existing chats from canvas');
+          setIsCreatingInitialChat(false); // Reset flag
           setChats(chatArray);
-          setCurrentChatId(chatArray[chatArray.length - 1].id);
+          
+          // Set current chat ID - prefer the last one or keep current if valid
+          const lastChatId = chatArray[chatArray.length - 1].id;
+          const currentIsValid = chatArray.some(c => c.id === currentChatId);
+          
+          if (!currentIsValid) {
+            console.log('📌 [CHAT INIT] Setting current chat to:', lastChatId);
+            setCurrentChatId(lastChatId);
+          } else {
+            console.log('📌 [CHAT INIT] Keeping current chat:', currentChatId);
+          }
+        } else if (isCreatingInitialChat) {
+          console.log('⏳ [CHAT INIT] Chat creation in progress, waiting...');
         }
       } else {
+        console.log('⚠️ [CHAT INIT] No canvas selected, clearing chats');
         setChats([]);
         setCurrentChatId(null);
+        setIsCreatingInitialChat(false);
       }
     };
     
     initializeChats();
-  }, [currentCanvas?.id, username, onReloadCanvas]);
+    // IMPORTANT: Removed onReloadCanvas from dependencies to prevent infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentCanvas?.id, username]);
 
   // Load canvas edit events from localStorage when chat changes
   useEffect(() => {
@@ -239,7 +265,13 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
   };
 
   const handleCreateNewChat = async () => {
-    if (!currentCanvas) return;
+    if (!currentCanvas) {
+      console.log('❌ [NEW CHAT] No current canvas');
+      return;
+    }
+
+    console.log('🆕 [NEW CHAT] Creating new chat for canvas:', currentCanvas.id);
+    console.log('📊 [NEW CHAT] Current chat count:', chats.length);
 
     try {
       const response = await fetch(
@@ -250,6 +282,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
       const data = await response.json();
 
       if (data.success) {
+        console.log('✅ [NEW CHAT] Chat created with ID:', data.chatId);
         const newChat: Chat = {
           id: data.chatId,
           messages: [],
@@ -257,16 +290,33 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
         };
         setChats([...chats, newChat]);
         setCurrentChatId(data.chatId);
+        console.log('📊 [NEW CHAT] Updated chat count:', chats.length + 1);
         toast.success('New chat created!');
+        
+        // Reload canvas to ensure sync
+        onReloadCanvas();
+      } else {
+        console.error('❌ [NEW CHAT] Failed to create chat:', data.error);
       }
     } catch (error) {
-      console.error('Create chat error:', error);
+      console.error('❌ [NEW CHAT] Error creating chat:', error);
       toast.error('Failed to create chat');
     }
   };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !currentCanvas || !currentChatId || isStreaming) return;
+    if (!inputValue.trim() || !currentCanvas || !currentChatId || isStreaming) {
+      console.log('⚠️ [SEND MSG] Cannot send:', {
+        hasInput: !!inputValue.trim(),
+        hasCanvas: !!currentCanvas,
+        hasChatId: !!currentChatId,
+        isStreaming
+      });
+      return;
+    }
+    
+    console.log('📤 [SEND MSG] Sending message to chat:', currentChatId);
+    console.log('📝 [SEND MSG] Message:', inputValue.substring(0, 50) + '...');
     
     const userMessage = inputValue;
     setInputValue('');
@@ -275,6 +325,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
     setIsEditingCanvas(false);
     
     try {
+      console.log('💾 [SEND MSG] Saving user message to database...');
       // Add user message to database
       const userMsgResponse = await fetch(
         `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/chat/${currentChatId}/message`,
@@ -286,12 +337,16 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
       );
 
       if (!userMsgResponse.ok) {
+        console.error('❌ [SEND MSG] Failed to save user message, status:', userMsgResponse.status);
         throw new Error('Failed to save user message');
       }
+      
+      console.log('✅ [SEND MSG] User message saved to database');
 
       // Update local state with user message
       setChats(prevChats => prevChats.map(chat => {
         if (chat.id === currentChatId) {
+          console.log('📊 [SEND MSG] Adding user message to local chat state');
           return {
             ...chat,
             messages: [...chat.messages, {
@@ -304,6 +359,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
         return chat;
       }));
 
+      console.log('🤖 [SEND MSG] Preparing to call AI...');
       // Build conversation history
       const currentChat = chats.find(c => c.id === currentChatId);
       const conversationHistory = currentChat?.messages.map((msg: any) => ({

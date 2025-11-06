@@ -167,7 +167,7 @@ export function CanvasSidebar({
                               variant="ghost"
                               size="sm"
                               className="h-6 w-6 p-0"
-                              onClick={(e) => {
+                              onClick={(e: React.MouseEvent) => {
                                 e.stopPropagation();
                                 setEditingCanvas(canvas);
                                 setEditCanvasName(canvas.name);
@@ -180,7 +180,7 @@ export function CanvasSidebar({
                               variant="ghost"
                               size="sm"
                               className="h-6 w-6 p-0 text-destructive hover:text-destructive/80"
-                              onClick={(e) => {
+                              onClick={(e: React.MouseEvent) => {
                                 e.stopPropagation();
                                 setDeletingCanvas(canvas);
                                 setIsDeleteOpen(true);

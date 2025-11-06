@@ -21,7 +21,6 @@ export interface ICanvas extends Document {
   username: string;
   name: string;
   script: string; // JSON string of nodes and edges
-  thumbnail?: string; // Base64 image or URL
   createdAt: Date;
   updatedAt: Date;
   lastAccessedAt: Date;
@@ -79,9 +78,6 @@ const CanvasSchema: Schema = new Schema({
     required: true,
     default: '{"nodes":[],"edges":[]}',
   },
-  thumbnail: {
-    type: String,
-  },
   chats: {
     type: [ChatSchema],
     default: [],
@@ -114,7 +110,6 @@ export interface IDeletedCanvas extends Document {
   username: string;
   name: string;
   script: string;
-  thumbnail?: string;
   chats: IChat[];
   deletedAt: Date;
   originalCreatedAt: Date;
@@ -137,9 +132,6 @@ const DeletedCanvasSchema: Schema = new Schema({
   script: {
     type: String,
     required: true,
-  },
-  thumbnail: {
-    type: String,
   },
   chats: [ChatSchema],
   deletedAt: {

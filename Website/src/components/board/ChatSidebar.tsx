@@ -7,7 +7,6 @@ import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
-import { toPng } from 'html-to-image';
 import type { Canvas } from '../CanvasPage';
 
 interface Message {
@@ -196,72 +195,6 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
 
   const getCurrentChat = () => {
     return chats.find(c => c.id === currentChatId);
-  };
-
-  const generateAndSaveThumbnail = async () => {
-    if (!currentCanvas) return;
-
-    try {
-      // Wait longer for canvas to fully render
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const viewportElement = document.querySelector('.react-flow__viewport') as HTMLElement;
-      if (!viewportElement) {
-        console.log('❌ No viewport element found for thumbnail');
-        return;
-      }
-
-      // Get the ReactFlow container to capture
-      const flowContainer = document.querySelector('.react-flow') as HTMLElement;
-      if (!flowContainer) {
-        console.log('❌ No flow container found');
-        return;
-      }
-
-      console.log('📸 Generating thumbnail...');
-
-      // Store original transform
-      const originalTransform = viewportElement.style.transform;
-      
-      // Set zoom to 30% for thumbnail
-      viewportElement.style.transform = `translate(0px, 0px) scale(0.3)`;
-      
-      // Wait for render
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      // Capture as PNG with white background
-      const dataUrl = await toPng(flowContainer, {
-        backgroundColor: '#ffffff',
-        quality: 0.5,
-        pixelRatio: 0.5,
-        skipFonts: true, // Skip font embedding to avoid CORS issues
-        width: 400, // Limit thumbnail size
-        height: 300,
-      });
-
-      // Restore original transform
-      viewportElement.style.transform = originalTransform;
-
-      console.log('📸 Thumbnail captured, saving to database...');
-
-      // Save thumbnail to database
-      const response = await fetch(
-        `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/thumbnail`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ thumbnail: dataUrl }),
-        }
-      );
-
-      if (response.ok) {
-        console.log('✅ Thumbnail saved successfully');
-      } else {
-        console.error('❌ Failed to save thumbnail to database');
-      }
-    } catch (error) {
-      console.error('❌ Failed to generate thumbnail:', error);
-    }
   };
 
   const handleCreateNewChat = async () => {
@@ -510,11 +443,6 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                     
                     // Reload canvas to show changes
                     await onReloadCanvas();
-                    
-                    // Generate and save thumbnail after canvas update
-                    setTimeout(async () => {
-                      await generateAndSaveThumbnail();
-                    }, 500); // Wait for render
                     
                     toast.success('Canvas updated');
                   } else {
@@ -922,7 +850,25 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                         </div>
                       ))}
                       
-                      {/* Streaming message or loading indicator */}
+                      {/* Active canvas editing indicator - shows first */}
+                      {isEditingCanvas && (
+                        <div className="flex justify-center" style={{ marginTop: '24px' }}>
+                          <div style={{ width: '85%', paddingTop: '16px', paddingBottom: '16px' }} className="rounded-lg px-4 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/20 shadow-sm animate-pulse">
+                            <div className="flex items-center justify-center gap-3">
+                              <div className="relative">
+                                <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                                <div className="absolute inset-0 h-5 w-5 rounded-full bg-primary/20 animate-ping" />
+                              </div>
+                              <div className="text-center">
+                                <p className="text-sm font-medium text-primary">Editing canvas</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Applying changes...</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Streaming message or loading indicator - shows after editing canvas */}
                       {isStreaming && (
                         <div className="flex justify-start">
                           <div className="max-w-[80%] rounded-xl px-4 py-2 bg-secondary/50 text-foreground border border-border shadow-sm">
@@ -947,24 +893,6 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                               </div>
                             )}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Active canvas editing indicator */}
-                      {isEditingCanvas && (
-                        <div className="flex justify-center" style={{ marginTop: '24px' }}>
-                          <div style={{ width: '85%', paddingTop: '16px', paddingBottom: '16px' }} className="rounded-lg px-4 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/20 shadow-sm animate-pulse">
-                            <div className="flex items-center justify-center gap-3">
-                              <div className="relative">
-                                <Loader2 className="h-5 w-5 text-primary animate-spin" />
-                                <div className="absolute inset-0 h-5 w-5 rounded-full bg-primary/20 animate-ping" />
-                              </div>
-                              <div className="text-center">
-                                <p className="text-sm font-medium text-primary">Editing canvas</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">Applying changes...</p>
-                              </div>
-                            </div>
                           </div>
                         </div>
                       )}

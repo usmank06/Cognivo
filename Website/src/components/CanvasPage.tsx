@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 export interface Canvas {
   id: string;
   name: string;
-  thumbnail?: string;
   createdAt: Date;
   updatedAt: Date;
   lastAccessedAt: Date;
@@ -206,7 +205,30 @@ export function CanvasPage({ username, userId }: CanvasPageProps) {
   // Function to reload canvas (for chat to call after DB update)
   const reloadCanvas = useCallback(async () => {
     if (currentCanvas) {
+      // Reload current canvas details
       await loadCanvasDetails(currentCanvas.id);
+      
+      // Also reload the canvases list
+      try {
+        const response = await fetch(`http://localhost:3001/api/canvas/${username}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log('🔄 [CANVAS PAGE] Refreshed canvas list');
+          setCanvases(data.canvases);
+          
+          // Update the current canvas reference with fresh data
+          const updatedCurrentCanvas = data.canvases.find((c: Canvas) => c.id === currentCanvas.id);
+          if (updatedCurrentCanvas) {
+            setCurrentCanvas(prev => ({
+              ...prev!,
+              ...updatedCurrentCanvas,
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('❌ [CANVAS PAGE] Error refreshing canvas list:', error);
+      }
     }
   }, [currentCanvas?.id, username]);
 

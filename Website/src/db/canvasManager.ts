@@ -28,7 +28,6 @@ export async function createCanvas(
       name,
       script: initialScript || '{"nodes":[],"edges":[]}',
       chats: [initialChat],
-      thumbnail: null,
     });
 
     console.log('💾 Canvas created in DB with', canvas.chats.length, 'chats');
@@ -41,7 +40,6 @@ export async function createCanvas(
         id: canvas._id.toString(),
         name: canvas.name,
         script: canvas.script,
-        thumbnail: canvas.thumbnail,
         createdAt: canvas.createdAt,
         updatedAt: canvas.updatedAt,
         chats: canvas.chats,
@@ -71,7 +69,6 @@ export async function getUserCanvases(username: string) {
         return {
           id: c._id.toString(),
           name: c.name,
-          thumbnail: c.thumbnail,
           script: c.script,
           createdAt: c.createdAt,
           updatedAt: c.updatedAt,
@@ -115,7 +112,6 @@ export async function getCanvas(canvasId: string, username: string) {
         id: canvas._id.toString(),
         name: canvas.name,
         script: canvas.script,
-        thumbnail: canvas.thumbnail,
         createdAt: canvas.createdAt,
         updatedAt: canvas.updatedAt,
         lastAccessedAt: canvas.lastAccessedAt,
@@ -190,37 +186,6 @@ export async function updateCanvasName(
   } catch (error) {
     console.error('Update canvas name error:', error);
     return { success: false, error: 'Failed to update canvas name' };
-  }
-}
-
-/**
- * Update canvas thumbnail
- */
-export async function updateCanvasThumbnail(
-  canvasId: string,
-  username: string,
-  thumbnail: string
-) {
-  try {
-    await ensureConnected();
-    
-    const canvas = await Canvas.findOneAndUpdate(
-      { _id: canvasId, username },
-      { 
-        thumbnail,
-        updatedAt: new Date(),
-      },
-      { new: true }
-    );
-    
-    if (!canvas) {
-      return { success: false, error: 'Canvas not found' };
-    }
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Update canvas thumbnail error:', error);
-    return { success: false, error: 'Failed to update canvas thumbnail' };
   }
 }
 
@@ -370,7 +335,6 @@ export async function deleteCanvas(canvasId: string, username: string) {
       username: canvas.username,
       name: canvas.name,
       script: canvas.script,
-      thumbnail: canvas.thumbnail,
       chats: canvas.chats,
       originalCreatedAt: canvas.createdAt,
       originalUpdatedAt: canvas.updatedAt,

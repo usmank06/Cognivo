@@ -27,7 +27,6 @@ import {
   getCanvas,
   updateCanvasScript,
   updateCanvasName,
-  updateCanvasThumbnail,
   addChatToCanvas,
   addMessageToChat,
   updateChatTitle,
@@ -171,18 +170,6 @@ app.patch('/api/canvas/:username/:canvasId/name', async (req, res) => {
     const { username, canvasId } = req.params;
     const { name } = req.body;
     const result = await updateCanvasName(canvasId, username, name);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Server error' });
-  }
-});
-
-// Update canvas thumbnail
-app.patch('/api/canvas/:username/:canvasId/thumbnail', async (req, res) => {
-  try {
-    const { username, canvasId } = req.params;
-    const { thumbnail } = req.body;
-    const result = await updateCanvasThumbnail(canvasId, username, thumbnail);
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });

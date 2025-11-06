@@ -205,7 +205,7 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
             <textarea
               value={localScript}
               onChange={handleScriptChange}
-              className="w-full h-full bg-background text-foreground px-6 py-6 font-mono text-sm resize-none focus:outline-none leading-6 border-0"
+              className="w-full h-full bg-white text-foreground px-6 py-6 font-mono text-sm resize-none focus:outline-none leading-6 border-0"
               placeholder='{"nodes": [], "edges": []}'
               spellCheck={false}
             />

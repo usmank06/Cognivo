@@ -7,6 +7,7 @@ import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import { toPng } from 'html-to-image';
 import type { Canvas } from '../CanvasPage';
 
 interface Message {
@@ -92,19 +93,49 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
 
   // Load chats when canvas changes
   useEffect(() => {
-    if (currentCanvas && currentCanvas.chats) {
-      setChats(currentCanvas.chats);
-      // Select the most recent chat if available
-      if (currentCanvas.chats.length > 0) {
-        setCurrentChatId(currentCanvas.chats[currentCanvas.chats.length - 1].id);
+    const initializeChats = async () => {
+      if (currentCanvas && currentCanvas.chats !== undefined) {
+        console.log('🔄 Loading chats for canvas:', currentCanvas.id, 'Chat count:', currentCanvas.chats.length);
+        
+        // If no chats exist, create one immediately
+        if (currentCanvas.chats.length === 0) {
+          console.log('⚡ No chats found, creating one now...');
+          try {
+            const response = await fetch(
+              `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/chat`,
+              { method: 'POST' }
+            );
+            const data = await response.json();
+            
+            if (data.success) {
+              const newChat: Chat = {
+                id: data.chatId,
+                messages: [],
+                createdAt: new Date(),
+              };
+              setChats([newChat]);
+              setCurrentChatId(data.chatId);
+              console.log('✅ Initial chat created:', data.chatId);
+              
+              // Reload canvas to update the UI
+              onReloadCanvas();
+            }
+          } catch (error) {
+            console.error('Failed to create initial chat:', error);
+          }
+        } else {
+          // Normal case: chats exist, just load them
+          setChats(currentCanvas.chats);
+          setCurrentChatId(currentCanvas.chats[currentCanvas.chats.length - 1].id);
+        }
       } else {
+        setChats([]);
         setCurrentChatId(null);
       }
-    } else {
-      setChats([]);
-      setCurrentChatId(null);
-    }
-  }, [currentCanvas]);
+    };
+    
+    initializeChats();
+  }, [currentCanvas?.id]);
 
   // Load canvas edit events from localStorage when chat changes
   useEffect(() => {
@@ -138,6 +169,72 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
 
   const getCurrentChat = () => {
     return chats.find(c => c.id === currentChatId);
+  };
+
+  const generateAndSaveThumbnail = async () => {
+    if (!currentCanvas) return;
+
+    try {
+      // Wait longer for canvas to fully render
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const viewportElement = document.querySelector('.react-flow__viewport') as HTMLElement;
+      if (!viewportElement) {
+        console.log('❌ No viewport element found for thumbnail');
+        return;
+      }
+
+      // Get the ReactFlow container to capture
+      const flowContainer = document.querySelector('.react-flow') as HTMLElement;
+      if (!flowContainer) {
+        console.log('❌ No flow container found');
+        return;
+      }
+
+      console.log('📸 Generating thumbnail...');
+
+      // Store original transform
+      const originalTransform = viewportElement.style.transform;
+      
+      // Set zoom to 30% for thumbnail
+      viewportElement.style.transform = `translate(0px, 0px) scale(0.3)`;
+      
+      // Wait for render
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Capture as PNG with white background
+      const dataUrl = await toPng(flowContainer, {
+        backgroundColor: '#ffffff',
+        quality: 0.5,
+        pixelRatio: 0.5,
+        skipFonts: true, // Skip font embedding to avoid CORS issues
+        width: 400, // Limit thumbnail size
+        height: 300,
+      });
+
+      // Restore original transform
+      viewportElement.style.transform = originalTransform;
+
+      console.log('📸 Thumbnail captured, saving to database...');
+
+      // Save thumbnail to database
+      const response = await fetch(
+        `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/thumbnail`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ thumbnail: dataUrl }),
+        }
+      );
+
+      if (response.ok) {
+        console.log('✅ Thumbnail saved successfully');
+      } else {
+        console.error('❌ Failed to save thumbnail to database');
+      }
+    } catch (error) {
+      console.error('❌ Failed to generate thumbnail:', error);
+    }
   };
 
   const handleCreateNewChat = async () => {
@@ -306,6 +403,12 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                     
                     // Reload canvas to show changes
                     await onReloadCanvas();
+                    
+                    // Generate and save thumbnail after canvas update
+                    setTimeout(async () => {
+                      await generateAndSaveThumbnail();
+                    }, 500); // Wait for render
+                    
                     toast.success('Canvas updated');
                   } else {
                     console.error('❌ Failed to save canvas to database');
@@ -544,13 +647,13 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
 
         {isExpanded && (
           <>
-            <div className="p-4 border-b border-border space-y-3 flex-shrink-0">
-              {chats.length > 0 && (
+            <div className="p-4 border-b border-border flex-shrink-0">
+              <div className="flex gap-2">
                 <Select 
                   value={currentChatId || undefined} 
                   onValueChange={setCurrentChatId}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="flex-1">
                     <SelectValue placeholder="Select a chat" />
                   </SelectTrigger>
                   <SelectContent style={{ maxWidth: `${width - 40}px` }}>
@@ -563,16 +666,15 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                     ))}
                   </SelectContent>
                 </Select>
-              )}
-              
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={handleCreateNewChat}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Chat
-              </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="flex-shrink-0 h-10 w-10 p-0"
+                  onClick={handleCreateNewChat}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             
             <div className="flex-1 overflow-hidden">
@@ -580,6 +682,14 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                 <div className="p-4">
                   {currentChatId && getCurrentChat() ? (
                     <div className="space-y-4">
+                      {getCurrentChat()!.messages.length === 0 && !isStreaming && (
+                        <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 240px)' }}>
+                          <div className="text-center text-muted-foreground">
+                            <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p className="text-sm">Send a message to get started</p>
+                          </div>
+                        </div>
+                      )}
                       {getCurrentChat()!.messages.map((message: Message, index: number) => (
                         <div key={index}>
                           {/* Regular message */}
@@ -637,25 +747,31 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                         </div>
                       ))}
                       
-                      {/* Streaming message */}
-                      {isStreaming && streamingText && (
+                      {/* Streaming message or loading indicator */}
+                      {isStreaming && (
                         <div className="flex justify-start">
                           <div className="max-w-[80%] rounded-xl px-4 py-2 bg-secondary/50 text-foreground border border-border shadow-sm">
-                            <div className="text-sm">
-                              <ReactMarkdown
-                                components={{
-                                  p: ({ children }) => <p className="text-sm whitespace-pre-wrap my-1 first:mt-0 last:mb-0">{children}</p>,
-                                  ul: ({ children }) => <ul className="text-sm list-disc ml-4 my-1 space-y-0.5">{children}</ul>,
-                                  ol: ({ children }) => <ol className="text-sm list-decimal ml-4 my-1 space-y-0.5">{children}</ol>,
-                                  li: ({ children }) => <li className="text-sm">{children}</li>,
-                                  strong: ({ children }) => <strong className="text-sm font-semibold">{children}</strong>,
-                                  em: ({ children }) => <em className="text-sm italic">{children}</em>,
-                                  code: ({ children }) => <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
-                                }}
-                              >
-                                {streamingText}
-                              </ReactMarkdown>
-                            </div>
+                            {streamingText ? (
+                              <div className="text-sm">
+                                <ReactMarkdown
+                                  components={{
+                                    p: ({ children }) => <p className="text-sm whitespace-pre-wrap my-1 first:mt-0 last:mb-0">{children}</p>,
+                                    ul: ({ children }) => <ul className="text-sm list-disc ml-4 my-1 space-y-0.5">{children}</ul>,
+                                    ol: ({ children }) => <ol className="text-sm list-decimal ml-4 my-1 space-y-0.5">{children}</ol>,
+                                    li: ({ children }) => <li className="text-sm">{children}</li>,
+                                    strong: ({ children }) => <strong className="text-sm font-semibold">{children}</strong>,
+                                    em: ({ children }) => <em className="text-sm italic">{children}</em>,
+                                    code: ({ children }) => <code className="bg-muted px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                                  }}
+                                >
+                                  {streamingText}
+                                </ReactMarkdown>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center py-2">
+                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
@@ -680,15 +796,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                       
                       <div ref={messagesEndRef} />
                     </div>
-                  ) : (
-                    <div className="h-full flex items-center justify-center">
-                      <div className="text-center text-muted-foreground">
-                        <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No chat selected</p>
-                        <p className="text-xs mt-1">Create a new chat to get started</p>
-                      </div>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               </ScrollArea>
             </div>
@@ -713,16 +821,6 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                     )}
                   </Button>
                 </div>
-                {!currentChatId && (
-                  <p className="text-xs text-muted-foreground mt-2 text-center">
-                    Create a chat first
-                  </p>
-                )}
-                {isStreaming && (
-                  <p className="text-xs text-muted-foreground mt-2 text-center">
-                    AI is responding...
-                  </p>
-                )}
             </div>
           </>
         )}

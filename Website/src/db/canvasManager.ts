@@ -13,14 +13,26 @@ export async function createCanvas(
   try {
     await ensureConnected();
     
+    // Create initial chat for the canvas
+    const initialChat: IChat = {
+      id: `chat-${Date.now()}`,
+      messages: [],
+      createdAt: new Date(),
+    };
+    
+    console.log('🔨 Creating canvas with initial chat:', initialChat);
+    
     const canvas = await Canvas.create({
       userId,
       username,
       name,
       script: initialScript || '{"nodes":[],"edges":[]}',
-      chats: [],
+      chats: [initialChat],
       thumbnail: null,
     });
+
+    console.log('💾 Canvas created in DB with', canvas.chats.length, 'chats');
+    console.log('📋 Chat IDs:', canvas.chats.map(c => c.id));
 
     return { 
       success: true, 
@@ -56,6 +68,7 @@ export async function getUserCanvases(username: string) {
         id: c._id.toString(),
         name: c.name,
         thumbnail: c.thumbnail,
+        script: c.script,
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
         lastAccessedAt: c.lastAccessedAt,

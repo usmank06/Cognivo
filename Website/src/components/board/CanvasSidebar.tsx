@@ -93,14 +93,14 @@ export function CanvasSidebar({
 
       <div 
         ref={sidebarRef}
-        className="bg-background border-l border-border shadow-sm flex flex-col relative"
+        className="bg-background border-l border-border shadow-sm flex flex-col relative h-full"
         style={{ 
           width: isExpanded ? '320px' : '0px',
           transition: 'width 0.3s ease-in-out'
         }}
       >
 
-        <div className="h-full flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           {isExpanded && (
             <>
               <div className="p-4 border-b border-border space-y-3">
@@ -144,9 +144,10 @@ export function CanvasSidebar({
                 </Dialog>
               </div>
               
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-3">
-                  {canvases.map((canvas) => (
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="p-4 space-y-3 pb-16">
+                    {canvases.map((canvas) => (
                     <div
                       key={canvas.id}
                       className={`
@@ -157,24 +158,8 @@ export function CanvasSidebar({
                       `}
                       onClick={() => onSelectCanvas(canvas)}
                     >
-                      {/* Thumbnail */}
-                      <div className="w-full h-32 bg-gradient-to-br from-[#FFE5D1] to-white flex items-center justify-center border-b border-border">
-                        {canvas.thumbnail ? (
-                          <img 
-                            src={canvas.thumbnail} 
-                            alt={canvas.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                            <FileText className="h-8 w-8" />
-                            <span className="text-xs">No preview</span>
-                          </div>
-                        )}
-                      </div>
-                      
                       {/* Canvas Info */}
-                      <div className="p-3">
+                      <div className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <h4 className="text-sm font-medium truncate pr-2">{canvas.name}</h4>
                           <div className="flex gap-1 flex-shrink-0">
@@ -208,17 +193,26 @@ export function CanvasSidebar({
                         
                         <div className="flex items-center justify-between text-xs">
                           <Badge variant="outline" className="text-xs">
-                            {canvas.chatCount || 0} chats
+                            {(() => {
+                              try {
+                                const script = JSON.parse(canvas.script || '{"nodes":[]}');
+                                const nodeCount = script.nodes?.length || 0;
+                                return `${nodeCount} element${nodeCount !== 1 ? 's' : ''}`;
+                              } catch {
+                                return '0 elements';
+                              }
+                            })()}
                           </Badge>
                           <span className="text-muted-foreground">
                             {formatDate(canvas.updatedAt)}
                           </span>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
             </>
           )}
         </div>

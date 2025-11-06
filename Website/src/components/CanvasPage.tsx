@@ -68,6 +68,7 @@ export function CanvasPage({ username, userId }: CanvasPageProps) {
       const data = await response.json();
       
       if (data.success) {
+        console.log('📥 Loaded canvas details with', data.canvas.chats?.length || 0, 'chats');
         setCanvasScript(data.canvas.script);
         // Update current canvas with full data
         setCurrentCanvas(prev => ({
@@ -98,6 +99,7 @@ export function CanvasPage({ username, userId }: CanvasPageProps) {
       const data = await response.json();
 
       if (data.success) {
+        console.log('✅ Canvas created with', data.canvas.chats?.length || 0, 'chats');
         toast.success('Canvas created!');
         await loadCanvases();
         // Select the newly created canvas
@@ -107,10 +109,11 @@ export function CanvasPage({ username, userId }: CanvasPageProps) {
           createdAt: data.canvas.createdAt,
           updatedAt: data.canvas.updatedAt,
           lastAccessedAt: new Date(),
-          chatCount: 0,
+          chatCount: data.canvas.chats?.length || 0,
           script: data.canvas.script,
-          chats: [],
+          chats: data.canvas.chats || [],
         };
+        console.log('📝 Setting current canvas with', newCanvas.chats?.length || 0, 'chats');
         setCurrentCanvas(newCanvas);
       }
     } catch (error) {

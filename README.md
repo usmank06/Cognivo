@@ -6,16 +6,17 @@ Transform your spreadsheets into intelligent, interactive visualizations using t
 ## 📸 Screenshots
 
 ### Landing Page
-![Cognivo Landing Page](./Media/landing-page.png)
+![Cognivo Landing Page](./Media/landing.png)
 *Clean, modern interface for data visualization*
 
 ### Interactive Dashboard
-![Interactive Canvas Dashboard](./Media/dashboard.gif)
+![Interactive Canvas Dashboard](./Media/dash.png)
 *AI-generated visualizations from uploaded CSV/Excel files*
 
 ## 🎥 Demo Video
 
-[![Cognivo Demo](./Media/video-thumbnail.png)](./Media/demo.mp4)
+[Watch Demo](./Media/demo.mp4)
+
 *Watch how Cognivo transforms raw data into insights in seconds*
 
 **Key Capabilities:**

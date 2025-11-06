@@ -28,6 +28,8 @@ interface ChatSidebarProps {
 
 export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [width, setWidth] = useState(320);
+  const [isResizing, setIsResizing] = useState(false);
   const [chats, setChats] = useState<any[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
@@ -36,6 +38,31 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
   const [isEditingCanvas, setIsEditingCanvas] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      const newWidth = e.clientX;
+      if (newWidth >= 200 && newWidth <= 600) {
+        setWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -296,46 +323,90 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
 
   if (!currentCanvas) {
     return (
-      <div className="w-12 bg-background border-r border-border flex items-center justify-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-12 w-12 p-0"
+      <div className="relative">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-6 h-16 bg-background border border-r-0 border-border rounded-l-lg flex items-center justify-center hover:bg-secondary/50 transition-colors shadow-sm z-20"
           disabled
         >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
+        <div className="w-0 bg-background border-r border-border flex items-center justify-center relative"></div>
       </div>
     );
   }
 
   return (
-    <>
-      <div 
-        className={`
-          bg-background border-r border-border shadow-sm transition-all duration-300 ease-in-out
-          ${isExpanded ? 'w-80' : 'w-12'}
-          flex flex-col h-full
-        `}
+    <div 
+      className="relative h-full" 
+      style={{ 
+        width: isExpanded ? `${width}px` : '0px', 
+        transition: isResizing ? 'none' : 'width 0.3s ease-in-out'
+      }}
+    >
+      {/* Collapse/Expand Tab - always visible on canvas side */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="absolute top-1/2 -translate-y-1/2 w-6 h-16 bg-background border border-r-0 border-border rounded-l-lg flex items-center justify-center hover:bg-secondary/50 transition-colors shadow-sm"
+        style={{
+          left: isExpanded ? `${width}px` : '0px',
+          transition: isResizing ? 'none' : 'left 0.3s ease-in-out',
+          zIndex: 30
+        }}
       >
         {isExpanded ? (
+          <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        )}
+      </button>
+
+      <div 
+        ref={sidebarRef}
+        className="bg-background border-r border-border shadow-sm flex flex-col h-full relative"
+        style={{ 
+          width: '100%',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Resize handle */}
+        {isExpanded && (
+          <div
+            className="absolute right-0 top-1/2 w-4 z-50 flex items-center justify-center"
+            style={{ 
+              userSelect: 'none', 
+              cursor: 'col-resize', 
+              backgroundColor: 'transparent',
+              height: '48px',
+              transform: 'translateY(-50%)',
+              borderRadius: '6px'
+            }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsResizing(true);
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(255, 145, 77, 0.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            {/* Drag indicator */}
+            <div style={{ 
+              width: '3px', 
+              height: '32px', 
+              backgroundColor: '#FF914D',
+              borderRadius: '9999px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+            }}></div>
+          </div>
+        )}
+
+        {isExpanded && (
           <>
             <div className="p-4 border-b border-border space-y-3 flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-medium">Chat</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsExpanded(false)}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-              </div>
-              
               {chats.length > 0 && (
                 <Select 
                   value={currentChatId || undefined} 
@@ -450,21 +521,10 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                     AI is responding...
                   </p>
                 )}
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsExpanded(true)}
-                className="h-12 w-12 p-0"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
             </div>
-          )}
+          </>
+        )}
       </div>
-    </>
+    </div>
   );
 }

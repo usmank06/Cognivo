@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, LayoutGrid, Edit2, Trash2, FileText } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -32,6 +32,7 @@ export function CanvasSidebar({
   const [editingCanvas, setEditingCanvas] = useState<Canvas | null>(null);
   const [newCanvasName, setNewCanvasName] = useState('');
   const [editCanvasName, setEditCanvasName] = useState('');
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   const handleCreateCanvas = () => {
     if (newCanvasName.trim()) {
@@ -61,33 +62,36 @@ export function CanvasSidebar({
   };
 
   return (
-    <>
-      <div 
-        className={`
-          bg-background border-l border-border shadow-sm transition-all duration-300 ease-in-out
-          ${isExpanded ? 'w-80' : 'w-12'}
-          flex flex-col
-        `}
+    <div className="relative h-full">
+      {/* Collapse/Expand Tab - always visible on canvas side */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-16 bg-background border border-l-0 border-border rounded-r-lg flex items-center justify-center hover:bg-secondary/50 transition-colors shadow-sm z-20"
+        style={{
+          right: isExpanded ? '320px' : '0px',
+          transition: 'right 0.3s ease-in-out'
+        }}
       >
-        <div className="h-full flex flex-col">
-          {isExpanded ? (
+        {isExpanded ? (
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+        )}
+      </button>
+
+      <div 
+        ref={sidebarRef}
+        className="bg-background border-l border-border shadow-sm flex flex-col relative"
+        style={{ 
+          width: isExpanded ? '320px' : '0px',
+          transition: 'width 0.3s ease-in-out'
+        }}
+      >
+
+        <div className="h-full flex flex-col overflow-hidden">
+          {isExpanded && (
             <>
               <div className="p-4 border-b border-border space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <LayoutGrid className="h-5 w-5 text-primary" />
-                    <span className="text-sm font-medium">Canvases</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsExpanded(false)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-                
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full">
@@ -205,17 +209,6 @@ export function CanvasSidebar({
                 </div>
               </ScrollArea>
             </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsExpanded(true)}
-                className="h-12 w-12 p-0"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-            </div>
           )}
         </div>
       </div>
@@ -252,6 +245,6 @@ export function CanvasSidebar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

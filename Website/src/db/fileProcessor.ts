@@ -47,10 +47,7 @@ export async function processFileInBackground(fileId: string, fileBuffer: Buffer
     // Mark as completed
     await completeProcessing(fileId, result.data);
     
-    console.log(`✅ File processing completed for: ${fileName}`);
-    
   } catch (error) {
-    console.error('File processing error:', error);
     await updateProcessingStatus(
       fileId, 
       'error', 
@@ -106,7 +103,6 @@ async function callPythonAPIForProcessing(
     return { success: true, data: processedData };
     
   } catch (error) {
-    console.error('Error calling Python API:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to connect to processing engine' 

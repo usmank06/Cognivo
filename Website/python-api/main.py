@@ -35,8 +35,7 @@ app.add_middleware(
 # Initialize Anthropic client
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 if not ANTHROPIC_API_KEY:
-    print("⚠️  WARNING: ANTHROPIC_API_KEY not set in environment")
-    print("   Create a .env file in python-api/ with: ANTHROPIC_API_KEY=your-key-here")
+    print("[Python API] Warning: ANTHROPIC_API_KEY not set")
 
 anthropic_client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
@@ -68,12 +67,9 @@ async def track_token_usage(username: str, input_tokens: int, output_tokens: int
                 f"http://localhost:3001/api/user/track-tokens",
                 json={"username": username, "tokens": total_tokens, "cost": cost}
             ) as response:
-                if response.status == 200:
-                    print(f"💰 Tracked {total_tokens} tokens (${cost:.6f}) for {username}")
-                else:
-                    print(f"⚠️  Failed to track tokens: {response.status}")
-    except Exception as e:
-        print(f"❌ Error tracking tokens: {str(e)}")
+                pass  # Silent tracking
+    except Exception:
+        pass  # Silent fail - don't break on tracking errors
 
 # ============================================
 # Data Models
@@ -263,8 +259,6 @@ CRITICAL:
         user_message = f"Please analyze this {file_type} file and generate intelligent visualization subsets as specified."
 
         # Call Claude API with streaming (required for large requests)
-        print(f"📊 Sending data to Claude for analysis ({row_count} rows, {col_count} columns)...")
-        
         response_text = ""
         input_tokens = 0
         output_tokens = 0
@@ -285,8 +279,6 @@ CRITICAL:
             final_message = await stream.get_final_message()
             input_tokens = final_message.usage.input_tokens
             output_tokens = final_message.usage.output_tokens
-        
-        print(f"✅ Claude response received ({len(response_text)} chars)")
         
         # Track token usage
         await track_token_usage(username, input_tokens, output_tokens)
@@ -315,8 +307,6 @@ CRITICAL:
         schema = FileSchema(**result["file_schema"])
         subsets = [DataSubset(**subset) for subset in result["subsets"]]
         
-        print(f"✨ Successfully generated {len(subsets)} subsets")
-        
         return FileProcessingResponse(
             success=True,
             file_schema=schema,
@@ -324,12 +314,9 @@ CRITICAL:
         )
         
     except json.JSONDecodeError as e:
-        print(f"❌ Failed to parse Claude response as JSON: {str(e)}")
-        print(f"Response text: {response_text[:500]}...")
         raise ValueError(f"Claude returned invalid JSON: {str(e)}")
     
     except Exception as e:
-        print(f"❌ Error in Claude analysis: {str(e)}")
         raise
 
 # ============================================
@@ -357,7 +344,6 @@ async def process_file(request: FileProcessingRequest):
         return result
         
     except Exception as e:
-        print(f"Error processing file: {str(e)}")
         return FileProcessingResponse(
             success=False,
             error=str(e)
@@ -380,7 +366,6 @@ async def process_csv_file(file_bytes: bytes, file_name: str, username: str) -> 
         return await generate_subsets_with_claude(df, file_name, "CSV", username)
         
     except Exception as e:
-        print(f"Error processing CSV: {str(e)}")
         raise
 
 async def process_excel_file(file_bytes: bytes, file_name: str, username: str) -> FileProcessingResponse:
@@ -399,7 +384,6 @@ async def process_excel_file(file_bytes: bytes, file_name: str, username: str) -
         # Combine all sheets into one dataframe
         if len(sheets_dict) == 1:
             df = list(sheets_dict.values())[0]
-            print(f"Excel has 1 sheet with {len(df)} rows")
         else:
             # Concatenate all sheets vertically
             all_dfs = []
@@ -409,7 +393,6 @@ async def process_excel_file(file_bytes: bytes, file_name: str, username: str) -
                 all_dfs.append(sheet_df)
             
             df = pd.concat(all_dfs, ignore_index=True)
-            print(f"Excel has {len(sheets_dict)} sheets, combined into {len(df)} total rows")
         
         if df.empty:
             raise ValueError("Excel sheet is empty")
@@ -418,7 +401,6 @@ async def process_excel_file(file_bytes: bytes, file_name: str, username: str) -
         return await generate_subsets_with_claude(df, file_name, "Excel", username)
         
     except Exception as e:
-        print(f"Error processing Excel: {str(e)}")
         raise
 
 # ============================================
@@ -461,7 +443,6 @@ Your response:"""
         return {"title": title}
         
     except Exception as e:
-        print(f"Error generating title: {str(e)}")
         # Return a fallback title
         return {"title": "💬 New Chat"}
 
@@ -548,12 +529,11 @@ async def stream_ai_response(request: CanvasUpdateRequest) -> AsyncIterator[byte
                 if event.type == "content_block_start":
                     if hasattr(event, 'content_block') and event.content_block.type == "text":
                         # Starting to stream text
-                        print("📝 Text block started")
+                        pass
                     elif hasattr(event, 'content_block') and event.content_block.type == "tool_use":
                         # Starting tool use
                         current_tool_use = event.content_block.name
                         tool_input_buffer = ""
-                        print(f"🔧 Tool use started: {current_tool_use}")
                         yield (json.dumps({
                             "type": "tool_start",
                             "tool_name": current_tool_use,
@@ -575,13 +555,10 @@ async def stream_ai_response(request: CanvasUpdateRequest) -> AsyncIterator[byte
                 elif event.type == "content_block_stop":
                     if current_tool_use == "edit_canvas" and tool_input_buffer:
                         # Tool finished - parse and send canvas update
-                        print(f"✅ Tool use finished, buffer length: {len(tool_input_buffer)}")
                         try:
                             tool_input = json.loads(tool_input_buffer)
                             canvas_json = tool_input.get("canvas_json", "")
                             explanation = tool_input.get("explanation", "")
-                            
-                            print(f"🎨 Parsed tool input - canvas length: {len(canvas_json)}")
                             
                             # Validate it's valid JSON
                             json.loads(canvas_json)
@@ -598,7 +575,6 @@ async def stream_ai_response(request: CanvasUpdateRequest) -> AsyncIterator[byte
                             }) + "\n").encode()
                             
                         except json.JSONDecodeError as e:
-                            print(f"❌ JSON decode error: {str(e)}")
                             yield (json.dumps({
                                 "type": "error",
                                 "error": f"Invalid canvas JSON: {str(e)}"
@@ -607,7 +583,7 @@ async def stream_ai_response(request: CanvasUpdateRequest) -> AsyncIterator[byte
                         current_tool_use = None
                         tool_input_buffer = ""
                     else:
-                        print(f"📝 Content block stopped (tool: {current_tool_use}, buffer: {len(tool_input_buffer) if tool_input_buffer else 0})")
+                        pass
                 
                 elif event.type == "message_stop":
                     # Handle any remaining tool use before finishing
@@ -660,7 +636,6 @@ async def stream_ai_response(request: CanvasUpdateRequest) -> AsyncIterator[byte
                     }) + "\n").encode()
         
     except Exception as e:
-        print(f"Error in stream_ai_response: {str(e)}")
         yield (json.dumps({
             "type": "error",
             "error": str(e)

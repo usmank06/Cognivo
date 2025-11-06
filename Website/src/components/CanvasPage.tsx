@@ -40,30 +40,21 @@ export function CanvasPage({ username, userId }: CanvasPageProps) {
 
   const loadCanvases = async () => {
     try {
-      console.log('📚 [CANVAS PAGE] Loading all canvases...');
       const response = await fetch(`http://localhost:3001/api/canvas/${username}`);
       const data = await response.json();
       
       if (data.success) {
-        console.log('✅ [CANVAS PAGE] Loaded', data.canvases.length, 'canvases');
-        data.canvases.forEach((c: any) => {
-          console.log('  📋 Canvas', c.name, '- chats:', c.chats?.length || 0);
-        });
         setCanvases(data.canvases);
         // If no current canvas and canvases exist, select the first one
         if (!currentCanvas && data.canvases.length > 0) {
-          console.log('🎯 [CANVAS PAGE] Auto-selecting first canvas');
           setCurrentCanvas(data.canvases[0]);
         } else if (data.canvases.length === 0) {
-          console.log('🆕 [CANVAS PAGE] No canvases found, creating default');
           // Create a default canvas if none exist
           handleCreateCanvas('My First Canvas');
         }
-      } else {
-        console.error('❌ [CANVAS PAGE] Failed to load canvases:', data.error);
       }
     } catch (error) {
-      console.error('❌ [CANVAS PAGE] Error loading canvases:', error);
+      console.error('[Canvas] Load failed:', error);
       toast.error('Failed to load canvases');
     } finally {
       setIsLoading(false);
@@ -72,13 +63,10 @@ export function CanvasPage({ username, userId }: CanvasPageProps) {
 
   const loadCanvasDetails = async (canvasId: string) => {
     try {
-      console.log('📥 [CANVAS PAGE] Loading canvas details for:', canvasId);
       const response = await fetch(`http://localhost:3001/api/canvas/${username}/${canvasId}`);
       const data = await response.json();
       
       if (data.success) {
-        console.log('✅ [CANVAS PAGE] Loaded canvas with', data.canvas.chats?.length || 0, 'chats');
-        console.log('📋 [CANVAS PAGE] Chat IDs:', data.canvas.chats?.map((c: any) => c.id) || []);
         setCanvasScript(data.canvas.script);
         // Update current canvas with full data
         setCurrentCanvas(prev => ({
@@ -86,18 +74,15 @@ export function CanvasPage({ username, userId }: CanvasPageProps) {
           script: data.canvas.script,
           chats: data.canvas.chats,
         }));
-      } else {
-        console.error('❌ [CANVAS PAGE] Failed to load canvas:', data.error);
       }
     } catch (error) {
-      console.error('❌ [CANVAS PAGE] Error loading canvas details:', error);
+      console.error('[Canvas] Load details failed:', error);
       toast.error('Failed to load canvas');
     }
   };
 
   const handleCreateCanvas = async (name: string) => {
     try {
-      console.log('🆕 [CANVAS PAGE] Creating new canvas:', name);
       const response = await fetch('http://localhost:3001/api/canvas/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -112,9 +97,6 @@ export function CanvasPage({ username, userId }: CanvasPageProps) {
       const data = await response.json();
 
       if (data.success) {
-        console.log('✅ [CANVAS PAGE] Canvas created with ID:', data.canvasId);
-        console.log('📊 [CANVAS PAGE] Canvas has', data.canvas.chats?.length || 0, 'chats');
-        console.log('📋 [CANVAS PAGE] Chat IDs:', data.canvas.chats?.map((c: any) => c.id) || []);
         toast.success('Canvas created!');
         await loadCanvases();
         // Select the newly created canvas
@@ -128,13 +110,10 @@ export function CanvasPage({ username, userId }: CanvasPageProps) {
           script: data.canvas.script,
           chats: data.canvas.chats || [],
         };
-        console.log('📝 [CANVAS PAGE] Setting current canvas with', newCanvas.chats?.length || 0, 'chats');
         setCurrentCanvas(newCanvas);
-      } else {
-        console.error('❌ [CANVAS PAGE] Failed to create canvas:', data.error);
       }
     } catch (error) {
-      console.error('❌ [CANVAS PAGE] Error creating canvas:', error);
+      console.error('[Canvas] Create failed:', error);
       toast.error('Failed to create canvas');
     }
   };
@@ -157,7 +136,7 @@ export function CanvasPage({ username, userId }: CanvasPageProps) {
         }
       }
     } catch (error) {
-      console.error('Rename canvas error:', error);
+      console.error('[Canvas] Rename failed:', error);
       toast.error('Failed to rename canvas');
     }
   };
@@ -187,7 +166,7 @@ export function CanvasPage({ username, userId }: CanvasPageProps) {
         }
       }
     } catch (error) {
-      console.error('Delete canvas error:', error);
+      console.error('[Canvas] Delete failed:', error);
       toast.error('Failed to delete canvas');
     }
   };
@@ -197,8 +176,6 @@ export function CanvasPage({ username, userId }: CanvasPageProps) {
   };
 
   const handleSelectCanvas = (canvas: Canvas) => {
-    console.log('🎯 [CANVAS PAGE] Selecting canvas:', canvas.id);
-    console.log('📊 [CANVAS PAGE] Canvas has', canvas.chats?.length || 0, 'chats loaded in state');
     setCurrentCanvas(canvas);
   };
 

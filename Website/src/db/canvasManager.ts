@@ -20,8 +20,6 @@ export async function createCanvas(
       createdAt: new Date(),
     };
     
-    console.log('🔨 Creating canvas with initial chat:', initialChat);
-    
     const canvas = await Canvas.create({
       userId,
       username,
@@ -29,9 +27,6 @@ export async function createCanvas(
       script: initialScript || '{"nodes":[],"edges":[]}',
       chats: [initialChat],
     });
-
-    console.log('💾 Canvas created in DB with', canvas.chats.length, 'chats');
-    console.log('📋 Chat IDs:', canvas.chats.map(c => c.id));
 
     return { 
       success: true, 
@@ -46,7 +41,6 @@ export async function createCanvas(
       }
     };
   } catch (error) {
-    console.error('Create canvas error:', error);
     return { success: false, error: 'Failed to create canvas' };
   }
 }
@@ -60,26 +54,20 @@ export async function getUserCanvases(username: string) {
     
     const canvases = await Canvas.find({ username }).sort({ updatedAt: -1 });
     
-    console.log('📚 [GET CANVASES] Found', canvases.length, 'canvases for', username);
-    
     return { 
       success: true, 
-      canvases: canvases.map(c => {
-        console.log('📋 [GET CANVASES] Canvas', c._id.toString(), 'has', c.chats.length, 'chats');
-        return {
-          id: c._id.toString(),
-          name: c.name,
-          script: c.script,
-          createdAt: c.createdAt,
-          updatedAt: c.updatedAt,
-          lastAccessedAt: c.lastAccessedAt,
-          chatCount: c.chats.length,
-          chats: c.chats, // Include full chat data
-        };
-      })
+      canvases: canvases.map(c => ({
+        id: c._id.toString(),
+        name: c.name,
+        script: c.script,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        lastAccessedAt: c.lastAccessedAt,
+        chatCount: c.chats.length,
+        chats: c.chats, // Include full chat data
+      }))
     };
   } catch (error) {
-    console.error('❌ [GET CANVASES] Error:', error);
     return { success: false, error: 'Failed to get canvases' };
   }
 }
@@ -94,13 +82,8 @@ export async function getCanvas(canvasId: string, username: string) {
     const canvas = await Canvas.findOne({ _id: canvasId, username });
     
     if (!canvas) {
-      console.log('❌ [GET CANVAS] Canvas not found:', canvasId);
       return { success: false, error: 'Canvas not found' };
     }
-    
-    console.log('✅ [GET CANVAS] Found canvas:', canvasId);
-    console.log('📊 [GET CANVAS] Canvas has', canvas.chats.length, 'chats');
-    console.log('📋 [GET CANVAS] Chat IDs:', canvas.chats.map(c => c.id));
     
     // Update last accessed
     canvas.lastAccessedAt = new Date();
@@ -119,7 +102,6 @@ export async function getCanvas(canvasId: string, username: string) {
       }
     };
   } catch (error) {
-    console.error('❌ [GET CANVAS] Error:', error);
     return { success: false, error: 'Failed to get canvas' };
   }
 }
@@ -153,7 +135,6 @@ export async function updateCanvasScript(
       updatedAt: canvas.updatedAt,
     };
   } catch (error) {
-    console.error('Update canvas script error:', error);
     return { success: false, error: 'Failed to update canvas script' };
   }
 }
@@ -184,7 +165,6 @@ export async function updateCanvasName(
     
     return { success: true };
   } catch (error) {
-    console.error('Update canvas name error:', error);
     return { success: false, error: 'Failed to update canvas name' };
   }
 }
@@ -202,12 +182,8 @@ export async function addChatToCanvas(
     const canvas = await Canvas.findOne({ _id: canvasId, username });
     
     if (!canvas) {
-      console.log('❌ [ADD CHAT] Canvas not found:', canvasId);
       return { success: false, error: 'Canvas not found' };
     }
-    
-    console.log('🆕 [ADD CHAT] Adding chat to canvas:', canvasId);
-    console.log('📊 [ADD CHAT] Current chat count:', canvas.chats.length);
     
     const newChat: IChat = {
       id: `chat-${Date.now()}`,
@@ -218,15 +194,11 @@ export async function addChatToCanvas(
     canvas.chats.push(newChat);
     await canvas.save();
     
-    console.log('✅ [ADD CHAT] Chat created with ID:', newChat.id);
-    console.log('📊 [ADD CHAT] New chat count:', canvas.chats.length);
-    
     return { 
       success: true,
       chatId: newChat.id,
     };
   } catch (error) {
-    console.error('❌ [ADD CHAT] Error:', error);
     return { success: false, error: 'Failed to add chat' };
   }
 }
@@ -247,20 +219,14 @@ export async function addMessageToChat(
     const canvas = await Canvas.findOne({ _id: canvasId, username });
     
     if (!canvas) {
-      console.log('❌ [ADD MSG] Canvas not found:', canvasId);
       return { success: false, error: 'Canvas not found' };
     }
     
-    const chat = canvas.chats.find(c => c.id === chatId);
+    const chat = canvas.chats.find((c: IChat) => c.id === chatId);
     
     if (!chat) {
-      console.log('❌ [ADD MSG] Chat not found:', chatId);
-      console.log('📋 [ADD MSG] Available chats:', canvas.chats.map(c => c.id));
       return { success: false, error: 'Chat not found' };
     }
-    
-    console.log('💬 [ADD MSG] Adding', role, 'message to chat:', chatId);
-    console.log('📊 [ADD MSG] Current message count:', chat.messages.length);
     
     const message: IChatMessage = {
       role,
@@ -272,11 +238,8 @@ export async function addMessageToChat(
     canvas.updatedAt = new Date();
     await canvas.save();
     
-    console.log('✅ [ADD MSG] Message saved. New count:', chat.messages.length);
-    
     return { success: true };
   } catch (error) {
-    console.error('❌ [ADD MSG] Error:', error);
     return { success: false, error: 'Failed to add message' };
   }
 }
@@ -299,7 +262,7 @@ export async function updateChatTitle(
       return { success: false, error: 'Canvas not found' };
     }
     
-    const chat = canvas.chats.find(c => c.id === chatId);
+    const chat = canvas.chats.find((c: IChat) => c.id === chatId);
     
     if (!chat) {
       return { success: false, error: 'Chat not found' };
@@ -311,7 +274,6 @@ export async function updateChatTitle(
     
     return { success: true };
   } catch (error) {
-    console.error('Update chat title error:', error);
     return { success: false, error: 'Failed to update chat title' };
   }
 }
@@ -344,9 +306,8 @@ export async function deleteCanvas(canvasId: string, username: string) {
     // Delete from active collection
     await Canvas.deleteOne({ _id: canvasId });
     
-    return { success: true, message: 'Canvas deleted successfully' };
+    return { success: true };
   } catch (error) {
-    console.error('Delete canvas error:', error);
     return { success: false, error: 'Failed to delete canvas' };
   }
 }
@@ -362,14 +323,14 @@ export async function getCanvasStats(username: string) {
     
     const stats = {
       totalCanvases: canvases.length,
-      totalChats: canvases.reduce((sum, c) => sum + c.chats.length, 0),
-      totalMessages: canvases.reduce((sum, c) => 
-        sum + c.chats.reduce((chatSum, chat) => chatSum + chat.messages.length, 0), 0
+      totalChats: canvases.reduce((sum: number, c: any) => sum + c.chats.length, 0),
+      totalMessages: canvases.reduce((sum: number, c: any) => 
+        sum + c.chats.reduce((chatSum: number, chat: any) => chatSum + chat.messages.length, 0), 0
       ),
       recentlyUpdated: canvases
-        .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+        .sort((a: any, b: any) => b.updatedAt.getTime() - a.updatedAt.getTime())
         .slice(0, 5)
-        .map(c => ({
+        .map((c: any) => ({
           id: c._id.toString(),
           name: c.name,
           updatedAt: c.updatedAt,
@@ -378,7 +339,6 @@ export async function getCanvasStats(username: string) {
     
     return { success: true, stats };
   } catch (error) {
-    console.error('Get canvas stats error:', error);
-    return { success: false, error: 'Failed to get canvas statistics' };
+    return { success: false, error: 'Failed to get canvas stats' };
   }
 }

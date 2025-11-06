@@ -11,7 +11,6 @@ export async function registerUser(email: string, username: string, password: st
     });
     return await response.json();
   } catch (error) {
-    console.error('Registration error:', error);
     return { success: false, error: 'Failed to connect to server' };
   }
 }
@@ -25,7 +24,6 @@ export async function loginUser(username: string, password: string) {
     });
     return await response.json();
   } catch (error) {
-    console.error('Login error:', error);
     return { success: false, error: 'Failed to connect to server' };
   }
 }
@@ -35,7 +33,6 @@ export async function getUserData(username: string) {
     const response = await fetch(`${API_URL}/user/${username}`);
     return await response.json();
   } catch (error) {
-    console.error('Get user data error:', error);
     return { success: false, error: 'Failed to connect to server' };
   }
 }
@@ -49,7 +46,6 @@ export async function changePassword(username: string, currentPassword: string, 
     });
     return await response.json();
   } catch (error) {
-    console.error('Change password error:', error);
     return { success: false, error: 'Failed to connect to server' };
   }
 }
@@ -61,7 +57,6 @@ export async function deleteUserAccount(username: string) {
     });
     return await response.json();
   } catch (error) {
-    console.error('Delete user error:', error);
     return { success: false, error: 'Failed to connect to server' };
   }
 }
@@ -75,7 +70,6 @@ export async function updateTokenUsage(username: string, tokens: number, cost: n
     });
     return await response.json();
   } catch (error) {
-    console.error('Update token usage error:', error);
     return { success: false, error: 'Failed to connect to server' };
   }
 }

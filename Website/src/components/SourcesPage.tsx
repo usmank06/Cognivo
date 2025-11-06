@@ -67,7 +67,7 @@ export function SourcesPage({ username, userId }: SourcesPageProps) {
         setFiles(data.files);
       }
     } catch (error) {
-      console.error('Failed to load files:', error);
+      console.error('[Sources] Load failed:', error);
       toast.error('Failed to load files');
     } finally {
       setIsLoading(false);
@@ -103,7 +103,7 @@ export function SourcesPage({ username, userId }: SourcesPageProps) {
         toast.error('Upload failed');
       }
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('[Sources] Upload failed:', error);
       toast.error('Failed to upload files');
     } finally {
       setIsUploading(false);

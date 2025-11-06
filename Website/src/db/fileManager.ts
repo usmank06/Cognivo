@@ -58,9 +58,7 @@ export async function uploadFile(
       fileName,
       fileType,
       username  // Pass username for token tracking
-    ).catch(err => {
-      console.error('Background processing failed:', err);
-    });
+    ).catch(() => {});
 
     return { 
       success: true, 
@@ -68,7 +66,6 @@ export async function uploadFile(
       message: 'File uploaded successfully. Processing started.',
     };
   } catch (error) {
-    console.error('File upload error:', error);
     return { success: false, error: 'Failed to upload file' };
   }
 }
@@ -84,7 +81,7 @@ export async function getUserFiles(username: string) {
     
     return { 
       success: true, 
-      files: files.map(f => ({
+      files: files.map((f: any) => ({
         id: f._id,
         originalFileName: f.originalFileName,
         nickname: f.nickname,
@@ -100,7 +97,6 @@ export async function getUserFiles(username: string) {
       }))
     };
   } catch (error) {
-    console.error('Get user files error:', error);
     return { success: false, error: 'Failed to get files' };
   }
 }
@@ -141,7 +137,6 @@ export async function getFileDetails(fileId: string, username: string) {
       }
     };
   } catch (error) {
-    console.error('Get file details error:', error);
     return { success: false, error: 'Failed to get file details' };
   }
 }
@@ -165,7 +160,6 @@ export async function updateFileNickname(fileId: string, username: string, nickn
     
     return { success: true, message: 'Nickname updated successfully' };
   } catch (error) {
-    console.error('Update nickname error:', error);
     return { success: false, error: 'Failed to update nickname' };
   }
 }
@@ -206,7 +200,6 @@ export async function deleteFile(fileId: string, username: string) {
     
     return { success: true, message: 'File deleted successfully' };
   } catch (error) {
-    console.error('Delete file error:', error);
     return { success: false, error: 'Failed to delete file' };
   }
 }
@@ -234,7 +227,6 @@ export async function getFileStatus(fileId: string, username: string) {
       }
     };
   } catch (error) {
-    console.error('Get file status error:', error);
     return { success: false, error: 'Failed to get file status' };
   }
 }
@@ -250,19 +242,18 @@ export async function getUserFileStats(username: string) {
     
     const stats = {
       totalFiles: files.length,
-      totalSize: files.reduce((sum, f) => sum + f.fileSize, 0),
+      totalSize: files.reduce((sum: number, f: any) => sum + f.fileSize, 0),
       byStatus: {
-        completed: files.filter(f => f.status === 'completed').length,
-        processing: files.filter(f => f.status === 'processing').length,
-        error: files.filter(f => f.status === 'error').length,
-        uploading: files.filter(f => f.status === 'uploading').length,
+        completed: files.filter((f: any) => f.status === 'completed').length,
+        processing: files.filter((f: any) => f.status === 'processing').length,
+        error: files.filter((f: any) => f.status === 'error').length,
+        uploading: files.filter((f: any) => f.status === 'uploading').length,
       },
-      totalSubsets: files.reduce((sum, f) => sum + f.subsets.length, 0),
+      totalSubsets: files.reduce((sum: number, f: any) => sum + f.subsets.length, 0),
     };
     
     return { success: true, stats };
   } catch (error) {
-    console.error('Get file stats error:', error);
     return { success: false, error: 'Failed to get file statistics' };
   }
 }
@@ -301,7 +292,6 @@ export async function downloadFile(fileId: string, username: string) {
       fileSize: file.fileSize,
     };
   } catch (error) {
-    console.error('Download file error:', error);
     return { success: false, error: 'Failed to download file' };
   }
 }
@@ -317,7 +307,7 @@ export async function getFileBuffer(gridfsFileId: any): Promise<Buffer> {
   
   return new Promise((resolve, reject) => {
     downloadStream
-      .on('data', (chunk) => chunks.push(chunk))
+      .on('data', (chunk: Buffer) => chunks.push(chunk))
       .on('error', reject)
       .on('end', () => resolve(Buffer.concat(chunks)));
   });
@@ -346,7 +336,6 @@ export async function getFileDataForAI(fileId: string, username: string) {
       fileBuffer: buffer.toString('base64'), // Convert to base64 for JSON transport
     };
   } catch (error) {
-    console.error('Get file data for AI error:', error);
     return { success: false, error: 'Failed to get file data' };
   }
 }

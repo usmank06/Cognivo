@@ -15,12 +15,9 @@ import { updateTokenUsage } from '../api/client';
  */
 export async function trackTokens(username: string, tokensUsed: number, costInDollars: number) {
   try {
-    const result = await updateTokenUsage(username, tokensUsed, costInDollars);
-    if (!result.success) {
-      console.error('Failed to track tokens:', result.error);
-    }
+    await updateTokenUsage(username, tokensUsed, costInDollars);
   } catch (error) {
-    console.error('Error tracking tokens:', error);
+    // Silently fail - token tracking shouldn't break app functionality
   }
 }
 

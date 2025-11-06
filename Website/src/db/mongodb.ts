@@ -23,7 +23,6 @@ export async function connectDB() {
     const dbPath = './mongodb-data';
     if (!existsSync(dbPath)) {
       await mkdir(dbPath, { recursive: true });
-      console.log('📁 Created mongodb-data directory');
     }
 
     // Create MongoDB Memory Server with persistence
@@ -51,14 +50,11 @@ export async function connectDB() {
       bucketName: 'uploads' // Files will be stored in 'uploads.files' and 'uploads.chunks' collections
     });
     
-    console.log('✅ MongoDB connected successfully!');
-    console.log('📍 MongoDB URL: ' + uri);
-    console.log('📁 Data location: ./mongodb-data/');
-    console.log('📦 GridFS initialized for file storage');
+    console.log('[MongoDB] Connected');
 
     return mongoose.connection;
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
+    console.error('[MongoDB] Connection failed:', error);
     throw error;
   }
 }
@@ -84,9 +80,8 @@ export async function disconnectDB() {
     }
     isConnected = false;
     gridFSBucket = null;
-    console.log('👋 MongoDB disconnected');
   } catch (error) {
-    console.error('Error disconnecting MongoDB:', error);
+    console.error('[MongoDB] Disconnect failed:', error);
   }
 }
 

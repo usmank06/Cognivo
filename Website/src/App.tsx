@@ -28,7 +28,6 @@ export default function App() {
         setIsLoggedIn(true);
         setCurrentPage(session.lastPage || 'canvas');
       } catch (error) {
-        console.error('Failed to restore session:', error);
         localStorage.removeItem('userSession');
       }
     }

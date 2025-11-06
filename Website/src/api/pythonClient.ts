@@ -40,7 +40,6 @@ async function callPythonAPI<T>(
     const data = await response.json();
     return { success: true, data };
   } catch (error) {
-    console.error('Python API call failed:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 

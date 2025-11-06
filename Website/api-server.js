@@ -57,7 +57,6 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Connect to MongoDB
 await connectDB();
-console.log('✅ API Server - MongoDB connected');
 
 // Routes
 app.post('/api/auth/register', async (req, res) => {
@@ -313,12 +312,10 @@ app.post('/api/chat/stream', async (req, res) => {
       }
       res.end();
     } catch (streamError) {
-      console.error('Stream reading error:', streamError);
       res.end();
     }
     
   } catch (error) {
-    console.error('Chat stream error:', error);
     res.status(500).json({ success: false, error: 'Failed to stream chat' });
   }
 });
@@ -350,14 +347,11 @@ app.post('/api/files/upload', upload.array('files', 10), async (req, res) => {
       results.push(result);
     }
     
-    res.json({ success: true, results });
-  } catch (error) {
-    console.error('File upload error:', error);
-    res.status(500).json({ success: false, error: 'Server error' });
-  }
-});
-
-// Get all files for a user
+      res.json({ success: true, results });
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Server error' });
+    }
+  });// Get all files for a user
 app.get('/api/files/:username', async (req, res) => {
   try {
     const { username } = req.params;
@@ -440,13 +434,12 @@ app.get('/api/files/:username/:fileId/download', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
     
     // Pipe the GridFS stream to response
-    result.stream.pipe(res);
-  } catch (error) {
-    console.error('File download error:', error);
-    res.status(500).json({ success: false, error: 'Server error' });
-  }
-});
+      result.stream.pipe(res);
+    } catch (error) {
+      res.status(500).json({ success: false, error: 'Server error' });
+    }
+  });
 
 app.listen(PORT, () => {
-  console.log(`🚀 API Server running on http://localhost:${PORT}`);
+  console.log(`[API] Server running on http://localhost:${PORT}`);
 });

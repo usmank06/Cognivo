@@ -45,7 +45,6 @@ export async function registerUser(email: string, username: string, password: st
       }
     };
   } catch (error) {
-    console.error('Registration error:', error);
     return { success: false, error: 'Registration failed' };
   }
 }
@@ -77,7 +76,6 @@ export async function loginUser(username: string, password: string) {
       }
     };
   } catch (error) {
-    console.error('Login error:', error);
     return { success: false, error: 'Login failed' };
   }
 }
@@ -102,7 +100,6 @@ export async function getUserData(username: string) {
       }
     };
   } catch (error) {
-    console.error('Get user data error:', error);
     return { success: false, error: 'Failed to get user data' };
   }
 }
@@ -129,7 +126,6 @@ export async function changePassword(username: string, currentPassword: string, 
 
     return { success: true };
   } catch (error) {
-    console.error('Change password error:', error);
     return { success: false, error: 'Failed to change password' };
   }
 }
@@ -161,7 +157,6 @@ export async function deleteUserAccount(username: string) {
 
     return { success: true };
   } catch (error) {
-    console.error('Delete user error:', error);
     return { success: false, error: 'Failed to delete user' };
   }
 }
@@ -181,7 +176,6 @@ export async function updateTokenUsage(username: string, tokensUsed: number, mon
 
     return { success: true };
   } catch (error) {
-    console.error('Update token usage error:', error);
     return { success: false, error: 'Failed to update token usage' };
   }
 }

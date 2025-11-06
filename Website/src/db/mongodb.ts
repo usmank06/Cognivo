@@ -3,6 +3,10 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import { mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { GridFSBucket } from 'mongodb';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 let mongoServer: MongoMemoryServer | null = null;
 let isConnected = false;
@@ -25,8 +29,8 @@ export async function connectDB() {
     // Create MongoDB Memory Server with persistence
     mongoServer = await MongoMemoryServer.create({
       instance: {
-        dbName: 'cognivo',
-        storageEngine: 'wiredTiger',
+        dbName: process.env.MONGODB_DB_NAME || 'cognivo',
+        storageEngine: (process.env.MONGODB_STORAGE_ENGINE as any) || 'wiredTiger',
         // Enable persistence - data will be stored in ./mongodb-data/
         dbPath: dbPath,
       },

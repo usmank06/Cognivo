@@ -1,54 +1,164 @@
-# Dependencies
+# ============================================
+# COGNIVO - Git Ignore Rules
+# ============================================
+
+# ============================================
+# ⚠️ SECURITY - NEVER COMMIT THESE!
+# ============================================
+
+# Environment variables (contains API keys!)
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+python-api/.env
+python-api/.env.local
+
+# MongoDB Data (contains user data!)
+mongodb-data/
+
+# Backup files that might contain sensitive data
+*.bak
+*.backup
+.env.backup
+
+# ============================================
+# Dependencies & Packages
+# ============================================
+
+# Node.js
 node_modules/
-Graph + Canvas Demo/
 /.pnp
 .pnp.js
 
-# MongoDB Data (Local persistence - DO NOT COMMIT)
-mongodb-data/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+venv/
+env/
+ENV/
 
-# Environment variables (Never commit these!)
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# ============================================
+# Build Output
+# ============================================
 
-# Testing
-/coverage
-
-# Production
+# Production builds
 /build
 /dist
+*.tsbuildinfo
 
-# Misc
-.DS_Store
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Vite
+.vite
 
+# ============================================
+# Testing & Coverage
+# ============================================
+
+/coverage
+*.coverage
+.pytest_cache/
+.hypothesis/
+
+# ============================================
 # Logs
+# ============================================
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+*.log
 
-# Editor directories and files
+# ============================================
+# Editor & IDE
+# ============================================
+
+# VS Code
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
+
+# IntelliJ IDEA
 .idea
+*.iml
+*.ipr
+*.iws
+
+# Other editors
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-# OS files
-Thumbs.db
-*.log
+# ============================================
+# OS Files
+# ============================================
 
-# Vite
-.vite
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ============================================
+# Temporary & Cache Files
+# ============================================
+
+*.tmp
+*.temp
+.cache/
+.temp/
+
+# ============================================
+# Project Specific
+# ============================================
+
+# Old demo folder (if exists)
+Graph + Canvas Demo/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Data files (potentially sensitive user data)
+# Uncomment if you don't want to commit data files
+# *.csv
+# *.xlsx
+# *.xls
+# data/
+
+# ML models (can be large)
+*.pkl
+*.h5
+*.joblib
+models/
+
+# ============================================
+# Documentation (optional)
+# ============================================
+
+# Uncomment if you want to exclude documentation builds
+# docs/_build/
+# site/
+

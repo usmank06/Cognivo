@@ -9,6 +9,7 @@ import base64
 import json
 import os
 import sys
+from pathlib import Path
 from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
 
@@ -16,8 +17,9 @@ from dotenv import load_dotenv
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding='utf-8')
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from root directory
+root_env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(dotenv_path=root_env_path)
 
 app = FastAPI(title="Cognivo Python API", version="1.0.0")
 
@@ -37,6 +39,9 @@ if not ANTHROPIC_API_KEY:
     print("   Create a .env file in python-api/ with: ANTHROPIC_API_KEY=your-key-here")
 
 anthropic_client = AsyncAnthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
+
+# System prompt configuration
+INCLUDE_RAW_FILE_DATA = os.getenv("INCLUDE_RAW_FILE_DATA", "false").lower() in ("true", "1", "yes")
 
 # ============================================
 # Claude Pricing Configuration
@@ -688,50 +693,51 @@ def build_system_prompt(current_canvas: str, data_sources: List[Dict[str, Any]])
             f"- {file_name}: {len(columns)} columns, {row_count} rows, {len(subsets)} pre-generated visualizations"
         )
     
-    # Parse raw file data and include FULL spreadsheet data
+    # Parse raw file data and include FULL spreadsheet data (ONLY if enabled)
     full_raw_data = []
-    for ds in data_sources:
-        file_name = ds.get("originalFileName", "Unknown")
-        raw_file_data = ds.get("rawFileData")
-        
-        if raw_file_data:
-            file_buffer = raw_file_data.get("fileBuffer")
-            file_type = raw_file_data.get("fileType", "")
+    if INCLUDE_RAW_FILE_DATA:
+        for ds in data_sources:
+            file_name = ds.get("originalFileName", "Unknown")
+            raw_file_data = ds.get("rawFileData")
             
-            if file_buffer:
-                try:
-                    import pandas as pd
-                    
-                    # Decode base64 buffer
-                    file_bytes = base64.b64decode(file_buffer)
-                    
-                    full_raw_data.append(f"\n**RAW FILE DATA: {file_name}**")
-                    
-                    # Parse based on file type
-                    if 'csv' in file_type.lower() or file_name.lower().endswith('.csv'):
-                        df = pd.read_csv(io.BytesIO(file_bytes))
-                        full_raw_data.append(f"Format: CSV")
-                        full_raw_data.append(f"Rows: {len(df)}, Columns: {len(df.columns)}")
-                        full_raw_data.append(f"Column Names: {list(df.columns)}")
-                        full_raw_data.append(f"\nFULL DATA (all {len(df)} rows):")
-                        full_raw_data.append(df.to_json(orient='records', date_format='iso'))
+            if raw_file_data:
+                file_buffer = raw_file_data.get("fileBuffer")
+                file_type = raw_file_data.get("fileType", "")
+                
+                if file_buffer:
+                    try:
+                        import pandas as pd
                         
-                    elif 'excel' in file_type.lower() or 'spreadsheet' in file_type.lower() or file_name.lower().endswith(('.xlsx', '.xls')):
-                        # Read all sheets
-                        sheets_dict = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None)
+                        # Decode base64 buffer
+                        file_bytes = base64.b64decode(file_buffer)
                         
-                        full_raw_data.append(f"Format: Excel")
-                        full_raw_data.append(f"Total Sheets: {len(sheets_dict)}")
+                        full_raw_data.append(f"\n**RAW FILE DATA: {file_name}**")
                         
-                        for sheet_name, sheet_df in sheets_dict.items():
-                            full_raw_data.append(f"\n--- SHEET: {sheet_name} ---")
-                            full_raw_data.append(f"Rows: {len(sheet_df)}, Columns: {len(sheet_df.columns)}")
-                            full_raw_data.append(f"Column Names: {list(sheet_df.columns)}")
-                            full_raw_data.append(f"\nFULL DATA (all {len(sheet_df)} rows):")
-                            full_raw_data.append(sheet_df.to_json(orient='records', date_format='iso'))
-                        
-                except Exception as e:
-                    full_raw_data.append(f"Error parsing raw data: {str(e)}")
+                        # Parse based on file type
+                        if 'csv' in file_type.lower() or file_name.lower().endswith('.csv'):
+                            df = pd.read_csv(io.BytesIO(file_bytes))
+                            full_raw_data.append(f"Format: CSV")
+                            full_raw_data.append(f"Rows: {len(df)}, Columns: {len(df.columns)}")
+                            full_raw_data.append(f"Column Names: {list(df.columns)}")
+                            full_raw_data.append(f"\nFULL DATA (all {len(df)} rows):")
+                            full_raw_data.append(df.to_json(orient='records', date_format='iso'))
+                            
+                        elif 'excel' in file_type.lower() or 'spreadsheet' in file_type.lower() or file_name.lower().endswith(('.xlsx', '.xls')):
+                            # Read all sheets
+                            sheets_dict = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None)
+                            
+                            full_raw_data.append(f"Format: Excel")
+                            full_raw_data.append(f"Total Sheets: {len(sheets_dict)}")
+                            
+                            for sheet_name, sheet_df in sheets_dict.items():
+                                full_raw_data.append(f"\n--- SHEET: {sheet_name} ---")
+                                full_raw_data.append(f"Rows: {len(sheet_df)}, Columns: {len(sheet_df.columns)}")
+                                full_raw_data.append(f"Column Names: {list(sheet_df.columns)}")
+                                full_raw_data.append(f"\nFULL DATA (all {len(sheet_df)} rows):")
+                                full_raw_data.append(sheet_df.to_json(orient='records', date_format='iso'))
+                            
+                    except Exception as e:
+                        full_raw_data.append(f"Error parsing raw data: {str(e)}")
     
     # Include FULL data from ALL subsets in context
     full_subsets_data = []
@@ -1008,7 +1014,7 @@ Total: 12 charts + title + summary = ~830px (PERFECT!)
 {chr(10).join(data_summary) if data_summary else "No data sources uploaded yet"}
 
 **COMPLETE RAW FILE DATA (ALL SHEETS, ALL ROWS):**
-{chr(10).join(full_raw_data) if full_raw_data else "No raw data available"}
+{chr(10).join(full_raw_data) if full_raw_data else ("Raw file data not included (disabled in configuration)" if not INCLUDE_RAW_FILE_DATA else "No raw data available")}
 
 **Pre-generated Subsets with FULL DATA:**
 {chr(10).join(full_subsets_data) if full_subsets_data else "No subsets available yet"}
@@ -1155,10 +1161,10 @@ When creating chart nodes, you MUST embed ALL data directly in the node. DO NOT 
 **IMPORTANT RULES:**
 1. **CREATE MANY GRAPHS**: For general requests, create 10-15+ charts. For reports, create 8-12+ charts in dense rows
 2. **Embed data**: ALWAYS include the full "data" array with all data points in the chart node
-3. **Complete access**: You have the COMPLETE raw spreadsheet data (all sheets, all rows) provided above in COMPLETE RAW FILE DATA section
-4. **Use raw data**: You can transform and use the raw data directly, or use the pre-generated subsets - you have everything!
-5. **All sheets available**: For Excel files, ALL sheets are provided separately - you can create visualizations from ANY sheet
-6. **Custom aggregations**: You can aggregate, filter, group, or transform the raw data however you want before creating visualizations
+3. **Data access**: {"You have the COMPLETE raw spreadsheet data (all sheets, all rows) provided above in COMPLETE RAW FILE DATA section" if INCLUDE_RAW_FILE_DATA else "Use the pre-generated subsets provided above - they contain aggregated and processed data ready for visualization"}
+4. **Use available data**: {"You can transform and use the raw data directly, or use the pre-generated subsets - you have everything!" if INCLUDE_RAW_FILE_DATA else "Use the pre-generated subsets which contain carefully selected data perspectives optimized for different chart types"}
+5. **Sheets availability**: {"For Excel files, ALL sheets are provided separately - you can create visualizations from ANY sheet" if INCLUDE_RAW_FILE_DATA else "Pre-generated subsets may include data from multiple sheets where applicable"}
+6. **Data transformations**: {"You can aggregate, filter, group, or transform the raw data however you want before creating visualizations" if INCLUDE_RAW_FILE_DATA else "Use the pre-generated subsets which are already aggregated and processed for optimal visualization"}
 7. **Match keys**: Ensure xKey and yKey match the field names in your data array
 8. **Position wisely**: Use dense horizontal rows (3-4 charts per row) with proper spacing. Row gap: ~260-280px vertical
 9. **Include styling**: Always set width/height in style, and chart styling in data.style
@@ -1293,10 +1299,13 @@ Be creative, helpful, and make beautiful, COMPREHENSIVE visualizations with ALL 
 # ============================================
 
 if __name__ == "__main__":
+    # Get port from environment variable or use default
+    port = int(os.getenv("PYTHON_API_PORT", "8000"))
+    
     uvicorn.run(
         "main:app",
         host="127.0.0.1",
-        port=8000,
+        port=port,
         reload=True,  # Auto-reload on code changes
         log_level="info"
     )

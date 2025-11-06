@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
+import dotenv from 'dotenv';
 import { connectDB } from './src/db/mongodb.ts';
 import { 
   registerUser, 
@@ -34,8 +35,12 @@ import {
   getCanvasStats,
 } from './src/db/canvasManager.ts';
 
+// Load environment variables
+dotenv.config();
+
 const app = express();
-const PORT = 3001;
+const PORT = process.env.API_SERVER_PORT || 3001;
+const PYTHON_API_URL = `http://localhost:${process.env.PYTHON_API_PORT || 8000}`;
 
 // File upload configuration
 const upload = multer({ 
@@ -274,7 +279,7 @@ app.post('/api/chat/stream', async (req, res) => {
     }
     
     // Call Python API for streaming
-    const pythonResponse = await fetch('http://localhost:8000/api/chat/stream', {
+    const pythonResponse = await fetch(`${PYTHON_API_URL}/api/chat/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

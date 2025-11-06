@@ -18,6 +18,7 @@ import {
   Cell
 } from 'recharts'
 import type { NodeData, RFNode, ChartKind } from './types'
+import { DESIGN_SYSTEM, getChartColor } from '../../../lib/designSystem'
 
 interface ChartNodeProps {
   id: string
@@ -25,7 +26,8 @@ interface ChartNodeProps {
   selected: boolean
 }
 
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#a4de6c', '#d084d0', '#8dd1e1']
+// Modern, accessible color palette
+const COLORS = DESIGN_SYSTEM.chartColors.primary
 
 function useNodeUpdater() {
   const { setNodes } = useReactFlow()
@@ -44,24 +46,24 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
   const zKey = data.zKey ?? 'z'
   const nameKey = data.nameKey ?? 'name'
   
-  // Style options with defaults
+  // Style options with modern defaults
   const style = data.style ?? {}
   const showGrid = style.showGrid ?? true
   const showLegend = style.showLegend ?? true
   const showTooltip = style.showTooltip ?? true
-  const strokeColor = style.strokeColor ?? '#8884d8'
-  const fillColor = style.fillColor ?? '#8884d8'
-  const fillOpacity = style.fillOpacity ?? 0.8
-  const strokeWidth = style.strokeWidth ?? 2
+  const strokeColor = style.strokeColor ?? DESIGN_SYSTEM.chartColors.primary[0]
+  const fillColor = style.fillColor ?? DESIGN_SYSTEM.chartColors.primary[0]
+  const fillOpacity = style.fillOpacity ?? 0.85
+  const strokeWidth = style.strokeWidth ?? 2.5
   const lineType = style.lineType ?? 'monotone'
   const showDots = style.showDots ?? true
-  const barSize = style.barSize ?? 20
+  const barSize = style.barSize ?? 24
   const innerRadius = style.innerRadius ?? 0
-  const outerRadius = style.outerRadius ?? 80
+  const outerRadius = style.outerRadius ?? 85
   const startAngle = style.startAngle ?? 0
   const endAngle = style.endAngle ?? 360
   const showLabels = style.showLabels ?? false
-  const radarFillOpacity = style.radarFillOpacity ?? 0.6
+  const radarFillOpacity = style.radarFillOpacity ?? 0.7
   const scatterSize = style.scatterSize ?? 64
 
   // Inline title editing
@@ -86,17 +88,26 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
   }
 
   const renderChart = () => {
-    const commonProps = { margin: { top: 5, right: 16, left: 0, bottom: 5 } }
+    const commonProps = { margin: { top: 8, right: 20, left: 0, bottom: 8 } }
+    const gridStyle = {
+      stroke: DESIGN_SYSTEM.chartDefaults.grid.stroke,
+      strokeDasharray: DESIGN_SYSTEM.chartDefaults.grid.strokeDasharray,
+      strokeOpacity: DESIGN_SYSTEM.chartDefaults.grid.strokeOpacity,
+    }
+    const axisStyle = {
+      fontSize: DESIGN_SYSTEM.chartDefaults.axis.fontSize,
+      fill: DESIGN_SYSTEM.chartDefaults.axis.fill,
+    }
     
     switch (kind) {
       case 'line':
         return (
           <LineChart data={d} {...commonProps}>
-            {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-            <XAxis dataKey={xKey} />
-            <YAxis />
-            {showTooltip && <Tooltip />}
-            {showLegend && <Legend />}
+            {showGrid && <CartesianGrid {...gridStyle} />}
+            <XAxis dataKey={xKey} tick={axisStyle} stroke={DESIGN_SYSTEM.chartDefaults.axis.stroke} />
+            <YAxis tick={axisStyle} stroke={DESIGN_SYSTEM.chartDefaults.axis.stroke} />
+            {showTooltip && <Tooltip contentStyle={{ borderRadius: DESIGN_SYSTEM.borders.radius.base, border: `1px solid ${DESIGN_SYSTEM.borders.color.light}`, boxShadow: DESIGN_SYSTEM.shadows.md }} />}
+            {showLegend && <Legend wrapperStyle={{ fontSize: DESIGN_SYSTEM.chartDefaults.legend.fontSize, color: DESIGN_SYSTEM.chartDefaults.legend.fill }} />}
             <Line 
               type={lineType} 
               dataKey={yKey} 
@@ -105,7 +116,7 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
               dot={showDots} 
             />
             {style.secondaryKey && (
-              <Line type={lineType} dataKey={style.secondaryKey} stroke="#82ca9d" strokeWidth={strokeWidth} dot={showDots} />
+              <Line type={lineType} dataKey={style.secondaryKey} stroke={getChartColor(1)} strokeWidth={strokeWidth} dot={showDots} />
             )}
           </LineChart>
         )
@@ -113,14 +124,14 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
       case 'bar':
         return (
           <BarChart data={d} {...commonProps}>
-            {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-            <XAxis dataKey={xKey} />
-            <YAxis />
-            {showTooltip && <Tooltip />}
-            {showLegend && <Legend />}
-            <Bar dataKey={yKey} fill={fillColor} barSize={barSize} />
+            {showGrid && <CartesianGrid {...gridStyle} />}
+            <XAxis dataKey={xKey} tick={axisStyle} stroke={DESIGN_SYSTEM.chartDefaults.axis.stroke} />
+            <YAxis tick={axisStyle} stroke={DESIGN_SYSTEM.chartDefaults.axis.stroke} />
+            {showTooltip && <Tooltip contentStyle={{ borderRadius: DESIGN_SYSTEM.borders.radius.base, border: `1px solid ${DESIGN_SYSTEM.borders.color.light}`, boxShadow: DESIGN_SYSTEM.shadows.md }} />}
+            {showLegend && <Legend wrapperStyle={{ fontSize: DESIGN_SYSTEM.chartDefaults.legend.fontSize, color: DESIGN_SYSTEM.chartDefaults.legend.fill }} />}
+            <Bar dataKey={yKey} fill={fillColor} barSize={barSize} radius={[6, 6, 0, 0]} />
             {style.secondaryKey && (
-              <Bar dataKey={style.secondaryKey} fill="#82ca9d" barSize={barSize} />
+              <Bar dataKey={style.secondaryKey} fill={getChartColor(1)} barSize={barSize} radius={[6, 6, 0, 0]} />
             )}
           </BarChart>
         )
@@ -128,11 +139,11 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
       case 'area':
         return (
           <AreaChart data={d} {...commonProps}>
-            {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-            <XAxis dataKey={xKey} />
-            <YAxis />
-            {showTooltip && <Tooltip />}
-            {showLegend && <Legend />}
+            {showGrid && <CartesianGrid {...gridStyle} />}
+            <XAxis dataKey={xKey} tick={axisStyle} stroke={DESIGN_SYSTEM.chartDefaults.axis.stroke} />
+            <YAxis tick={axisStyle} stroke={DESIGN_SYSTEM.chartDefaults.axis.stroke} />
+            {showTooltip && <Tooltip contentStyle={{ borderRadius: DESIGN_SYSTEM.borders.radius.base, border: `1px solid ${DESIGN_SYSTEM.borders.color.light}`, boxShadow: DESIGN_SYSTEM.shadows.md }} />}
+            {showLegend && <Legend wrapperStyle={{ fontSize: DESIGN_SYSTEM.chartDefaults.legend.fontSize, color: DESIGN_SYSTEM.chartDefaults.legend.fill }} />}
             <Area 
               type={lineType} 
               dataKey={yKey} 
@@ -145,8 +156,8 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
               <Area 
                 type={lineType} 
                 dataKey={style.secondaryKey} 
-                stroke="#82ca9d" 
-                fill="#82ca9d" 
+                stroke={getChartColor(1)} 
+                fill={getChartColor(1)} 
                 fillOpacity={fillOpacity}
                 strokeWidth={strokeWidth}
               />
@@ -157,22 +168,24 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
       case 'composed':
         return (
           <ComposedChart data={d} {...commonProps}>
-            {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-            <XAxis dataKey={xKey} />
-            <YAxis />
-            {showTooltip && <Tooltip />}
-            {showLegend && <Legend />}
-            <Area type={lineType} dataKey={yKey} fill={fillColor} stroke={strokeColor} fillOpacity={0.3} />
-            {style.secondaryKey && <Bar dataKey={style.secondaryKey} fill="#413ea0" barSize={barSize} />}
-            {style.tertiaryKey && <Line type={lineType} dataKey={style.tertiaryKey} stroke="#ff7300" strokeWidth={strokeWidth} />}
+            {showGrid && <CartesianGrid {...gridStyle} />}
+            <XAxis dataKey={xKey} tick={axisStyle} stroke={DESIGN_SYSTEM.chartDefaults.axis.stroke} />
+            <YAxis tick={axisStyle} stroke={DESIGN_SYSTEM.chartDefaults.axis.stroke} />
+            {showTooltip && <Tooltip contentStyle={{ borderRadius: DESIGN_SYSTEM.borders.radius.base, border: `1px solid ${DESIGN_SYSTEM.borders.color.light}`, boxShadow: DESIGN_SYSTEM.shadows.md }} />}
+            {showLegend && <Legend wrapperStyle={{ fontSize: DESIGN_SYSTEM.chartDefaults.legend.fontSize, color: DESIGN_SYSTEM.chartDefaults.legend.fill }} />}
+            <Area type={lineType} dataKey={yKey} fill={fillColor} stroke={strokeColor} fillOpacity={0.4} />
+            {style.secondaryKey && <Bar dataKey={style.secondaryKey} fill={getChartColor(1)} barSize={barSize} radius={[6, 6, 0, 0]} />}
+            {style.tertiaryKey && <Line type={lineType} dataKey={style.tertiaryKey} stroke={getChartColor(2)} strokeWidth={strokeWidth} />}
           </ComposedChart>
         )
       
       case 'pie':
+        // Allow custom pie colors via style.pieColors array, or use fillColor for monochrome, or default palette
+        const pieColors = style.pieColors ?? (fillColor !== DESIGN_SYSTEM.chartColors.primary[0] ? [fillColor] : null)
         return (
           <PieChart>
-            {showTooltip && <Tooltip />}
-            {showLegend && <Legend />}
+            {showTooltip && <Tooltip contentStyle={{ borderRadius: DESIGN_SYSTEM.borders.radius.base, border: `1px solid ${DESIGN_SYSTEM.borders.color.light}`, boxShadow: DESIGN_SYSTEM.shadows.md }} />}
+            {showLegend && <Legend wrapperStyle={{ fontSize: DESIGN_SYSTEM.chartDefaults.legend.fontSize, color: DESIGN_SYSTEM.chartDefaults.legend.fill }} />}
             <Pie 
               data={d} 
               dataKey={yKey} 
@@ -182,10 +195,15 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
               outerRadius={outerRadius}
               innerRadius={innerRadius}
               label={showLabels}
+              paddingAngle={2}
             >
-              {d.map((_e, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
+              {d.map((_e, i) => {
+                // Use custom colors, or single fill color with opacity variation, or default palette
+                const fill = pieColors 
+                  ? pieColors[i % pieColors.length] 
+                  : getChartColor(i)
+                return <Cell key={i} fill={fill} />
+              })}
             </Pie>
           </PieChart>
         )
@@ -193,11 +211,11 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
       case 'radar':
         return (
           <RadarChart data={d} cx="50%" cy="50%" outerRadius="80%">
-            <PolarGrid />
-            <PolarAngleAxis dataKey={xKey} />
-            <PolarRadiusAxis />
-            {showTooltip && <Tooltip />}
-            {showLegend && <Legend />}
+            <PolarGrid stroke={DESIGN_SYSTEM.chartDefaults.grid.stroke} />
+            <PolarAngleAxis dataKey={xKey} tick={{ fontSize: DESIGN_SYSTEM.chartDefaults.axis.fontSize, fill: DESIGN_SYSTEM.chartDefaults.axis.fill }} />
+            <PolarRadiusAxis tick={{ fontSize: DESIGN_SYSTEM.chartDefaults.axis.fontSize, fill: DESIGN_SYSTEM.chartDefaults.axis.fill }} />
+            {showTooltip && <Tooltip contentStyle={{ borderRadius: DESIGN_SYSTEM.borders.radius.base, border: `1px solid ${DESIGN_SYSTEM.borders.color.light}`, boxShadow: DESIGN_SYSTEM.shadows.md }} />}
+            {showLegend && <Legend wrapperStyle={{ fontSize: DESIGN_SYSTEM.chartDefaults.legend.fontSize, color: DESIGN_SYSTEM.chartDefaults.legend.fill }} />}
             <Radar 
               name={data.label || 'Series 1'} 
               dataKey={yKey} 
@@ -209,8 +227,8 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
               <Radar 
                 name="Series 2" 
                 dataKey={style.secondaryKey} 
-                stroke="#82ca9d" 
-                fill="#82ca9d" 
+                stroke={getChartColor(1)} 
+                fill={getChartColor(1)} 
                 fillOpacity={radarFillOpacity} 
               />
             )}
@@ -241,12 +259,12 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
       case 'scatter':
         return (
           <ScatterChart {...commonProps}>
-            {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-            <XAxis dataKey={xKey} type="number" />
-            <YAxis dataKey={yKey} type="number" />
+            {showGrid && <CartesianGrid {...gridStyle} />}
+            <XAxis dataKey={xKey} type="number" tick={axisStyle} stroke={DESIGN_SYSTEM.chartDefaults.axis.stroke} />
+            <YAxis dataKey={yKey} type="number" tick={axisStyle} stroke={DESIGN_SYSTEM.chartDefaults.axis.stroke} />
             <ZAxis dataKey={zKey} type="number" range={[scatterSize, scatterSize * 2]} />
-            {showTooltip && <Tooltip cursor={{ strokeDasharray: '3 3' }} />}
-            {showLegend && <Legend />}
+            {showTooltip && <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ borderRadius: DESIGN_SYSTEM.borders.radius.base, border: `1px solid ${DESIGN_SYSTEM.borders.color.light}`, boxShadow: DESIGN_SYSTEM.shadows.md }} />}
+            {showLegend && <Legend wrapperStyle={{ fontSize: DESIGN_SYSTEM.chartDefaults.legend.fontSize, color: DESIGN_SYSTEM.chartDefaults.legend.fill }} />}
             <Scatter name={data.label || 'Series 1'} data={d} fill={fillColor} />
           </ScatterChart>
         )
@@ -293,9 +311,30 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
   }
 
   return (
-    <div style={{ width: '100%', height: '100%', background: 'white', borderRadius: 12, boxShadow: '0 6px 24px rgba(0,0,0,.08)', border: '1px solid #eee', position: 'relative' }}>
+    <div style={{ 
+      width: '100%', 
+      height: '100%', 
+      background: DESIGN_SYSTEM.chartDefaults.container.background, 
+      borderRadius: DESIGN_SYSTEM.chartDefaults.container.borderRadius, 
+      boxShadow: DESIGN_SYSTEM.chartDefaults.container.boxShadow, 
+      border: `${DESIGN_SYSTEM.borders.width.base} solid ${DESIGN_SYSTEM.borders.color.light}`, 
+      position: 'relative',
+      fontFamily: DESIGN_SYSTEM.typography.fontFamily,
+    }}>
       {/* Resizer handles show when selected */}
-      <NodeResizer isVisible={selected} minWidth={240} minHeight={180} handleStyle={{ width: 10, height: 10, borderRadius: 4 }} />
+      <NodeResizer 
+        isVisible={selected} 
+        minWidth={DESIGN_SYSTEM.chartDefaults.minWidth} 
+        minHeight={DESIGN_SYSTEM.chartDefaults.minHeight} 
+        handleStyle={{ 
+          width: 12, 
+          height: 12, 
+          borderRadius: 6, 
+          background: DESIGN_SYSTEM.colors.primary[500],
+          border: '2px solid white',
+          boxShadow: DESIGN_SYSTEM.shadows.sm,
+        }} 
+      />
 
       {/* Inline editable title */}
       <div
@@ -303,13 +342,23 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
         suppressContentEditableWarning
         onBlur={onTitleBlur}
         onKeyDown={onTitleKeyDown}
-        style={{ padding: '6px 10px', borderBottom: '1px solid #f0f0f0', fontSize: 12, color: '#555', outline: 'none', cursor: 'text', userSelect: 'text' }}
+        style={{ 
+          padding: '10px 14px', 
+          borderBottom: `1.5px solid ${DESIGN_SYSTEM.borders.color.light}`, 
+          fontSize: DESIGN_SYSTEM.typography.fontSize.sm, 
+          fontWeight: DESIGN_SYSTEM.typography.fontWeight.semibold,
+          color: DESIGN_SYSTEM.colors.neutral[700], 
+          outline: 'none', 
+          cursor: 'text', 
+          userSelect: 'text',
+          background: DESIGN_SYSTEM.colors.neutral[50],
+        }}
       >
         {data.label ?? (kind.toUpperCase() + ' Chart')}
       </div>
 
       {/* Chart area uses 100% of node size */}
-      <div style={{ width: '100%', height: 'calc(100% - 32px)', padding: 6 }}>
+      <div style={{ width: '100%', height: 'calc(100% - 38px)', padding: '12px' }}>
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
         </ResponsiveContainer>
@@ -317,7 +366,18 @@ export function ChartNode({ id, data, selected }: ChartNodeProps) {
 
       {/* Toolbar anchored to node (only while selected) */}
       <NodeToolbar isVisible={selected} position={"top" as any}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: 'white', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.08)', maxWidth: 800 }}>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: DESIGN_SYSTEM.spacing.sm, 
+          background: 'white', 
+          padding: '10px 12px', 
+          border: `${DESIGN_SYSTEM.borders.width.base} solid ${DESIGN_SYSTEM.borders.color.light}`, 
+          borderRadius: DESIGN_SYSTEM.borders.radius.lg, 
+          boxShadow: DESIGN_SYSTEM.shadows.lg, 
+          maxWidth: 800,
+          fontFamily: DESIGN_SYSTEM.typography.fontFamily,
+        }}>
           {/* Row 1: Type and Keys */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <label style={{ fontSize: 11, color: '#555', fontWeight: 600 }}>Type</label>

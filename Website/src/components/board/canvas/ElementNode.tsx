@@ -2,6 +2,7 @@
 import { useCallback } from 'react'
 import { NodeResizer, NodeToolbar, useReactFlow } from 'reactflow'
 import type { NodeData, RFNode, ElementKind } from './types'
+import { DESIGN_SYSTEM } from '../../../lib/designSystem'
 
 interface ElementNodeProps {
   id: string
@@ -21,12 +22,36 @@ export function ElementNode({ id, data, selected }: ElementNodeProps) {
   
   const kind = data.kind as ElementKind
   const text = data.text ?? 'Text'
-  const fontSize = data.fontSize ?? 16
-  const fontWeight = data.fontWeight ?? 'normal'
+  
+  // Use design system defaults based on element type
+  const isDivider = kind === 'horizontalDivider' || kind === 'verticalDivider'
+  
+  const fontSize = data.fontSize ?? (
+    kind === 'title' ? DESIGN_SYSTEM.elementDefaults.title.fontSize :
+    kind === 'sectionHeader' ? DESIGN_SYSTEM.elementDefaults.sectionHeader.fontSize :
+    DESIGN_SYSTEM.elementDefaults.text.fontSize
+  )
+  
+  const fontWeight = data.fontWeight ?? (
+    kind === 'title' ? DESIGN_SYSTEM.elementDefaults.title.fontWeight :
+    kind === 'sectionHeader' ? DESIGN_SYSTEM.elementDefaults.sectionHeader.fontWeight :
+    DESIGN_SYSTEM.elementDefaults.text.fontWeight
+  )
+  
   const textAlign = data.textAlign ?? 'left'
-  const textColor = data.textColor ?? '#333'
-  const bgColor = data.backgroundColor ?? 'white'
-  const dividerColor = data.dividerColor ?? '#e5e7eb'
+  
+  const textColor = data.textColor ?? (
+    kind === 'title' || kind === 'sectionHeader' ? DESIGN_SYSTEM.colors.neutral[800] :
+    DESIGN_SYSTEM.colors.neutral[700]
+  )
+  
+  const bgColor = data.backgroundColor ?? (
+    kind === 'sectionHeader' ? DESIGN_SYSTEM.colors.neutral[50] :
+    isDivider ? 'transparent' :
+    '#ffffff'
+  )
+  
+  const dividerColor = data.dividerColor ?? DESIGN_SYSTEM.borders.color.base
   const dividerThickness = data.dividerThickness ?? 2
 
   // Inline text editing
@@ -155,20 +180,28 @@ export function ElementNode({ id, data, selected }: ElementNodeProps) {
       width: '100%', 
       height: '100%', 
       background: bgColor, 
-      borderRadius: 8, 
-      boxShadow: '0 4px 12px rgba(0,0,0,.06)', 
-      border: '1px solid #eee',
+      borderRadius: DESIGN_SYSTEM.borders.radius.lg, 
+      boxShadow: isDivider ? 'none' : DESIGN_SYSTEM.shadows.md, 
+      border: isDivider ? 'none' : `${DESIGN_SYSTEM.borders.width.base} solid ${DESIGN_SYSTEM.borders.color.light}`,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      position: 'relative'
+      position: 'relative',
+      fontFamily: DESIGN_SYSTEM.typography.fontFamily,
     }}>
       {/* Resizer handles */}
       <NodeResizer 
         isVisible={selected} 
         minWidth={kind === 'verticalDivider' ? 10 : 100} 
         minHeight={kind === 'horizontalDivider' ? 10 : 40} 
-        handleStyle={{ width: 10, height: 10, borderRadius: 4 }} 
+        handleStyle={{ 
+          width: 12, 
+          height: 12, 
+          borderRadius: 6,
+          background: DESIGN_SYSTEM.colors.primary[500],
+          border: '2px solid white',
+          boxShadow: DESIGN_SYSTEM.shadows.sm,
+        }} 
       />
 
       {/* Element content */}
@@ -179,13 +212,14 @@ export function ElementNode({ id, data, selected }: ElementNodeProps) {
         <div style={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: 8, 
+          gap: DESIGN_SYSTEM.spacing.sm, 
           background: 'white', 
-          padding: '8px 10px', 
-          border: '1px solid #e5e7eb', 
-          borderRadius: 8, 
-          boxShadow: '0 8px 24px rgba(0,0,0,.08)',
-          maxWidth: 600
+          padding: '10px 12px', 
+          border: `${DESIGN_SYSTEM.borders.width.base} solid ${DESIGN_SYSTEM.borders.color.light}`, 
+          borderRadius: DESIGN_SYSTEM.borders.radius.lg, 
+          boxShadow: DESIGN_SYSTEM.shadows.lg,
+          maxWidth: 600,
+          fontFamily: DESIGN_SYSTEM.typography.fontFamily,
         }}>
           {/* Row 1: Type selector */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>

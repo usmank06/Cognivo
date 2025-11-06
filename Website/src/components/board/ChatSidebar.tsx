@@ -28,8 +28,15 @@ interface ChatSidebarProps {
 }
 
 export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSidebarProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [width, setWidth] = useState(320);
+  // Load saved state from localStorage
+  const [isExpanded, setIsExpanded] = useState(() => {
+    const saved = localStorage.getItem('chatSidebar-expanded');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+  const [width, setWidth] = useState(() => {
+    const saved = localStorage.getItem('chatSidebar-width');
+    return saved !== null ? parseInt(saved) : 320;
+  });
   const [isResizing, setIsResizing] = useState(false);
   const [chats, setChats] = useState<any[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
@@ -42,6 +49,16 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
   const abortControllerRef = useRef<AbortController | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const canvasEditStartTime = useRef<number | null>(null);
+
+  // Save expanded state to localStorage
+  useEffect(() => {
+    localStorage.setItem('chatSidebar-expanded', JSON.stringify(isExpanded));
+  }, [isExpanded]);
+
+  // Save width to localStorage
+  useEffect(() => {
+    localStorage.setItem('chatSidebar-width', width.toString());
+  }, [width]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {

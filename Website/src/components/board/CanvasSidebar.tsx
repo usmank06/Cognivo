@@ -26,13 +26,22 @@ export function CanvasSidebar({
   onRenameCanvas,
   onDeleteCanvas 
 }: CanvasSidebarProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  // Load saved state from localStorage
+  const [isExpanded, setIsExpanded] = useState(() => {
+    const saved = localStorage.getItem('canvasSidebar-expanded');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingCanvas, setEditingCanvas] = useState<Canvas | null>(null);
   const [newCanvasName, setNewCanvasName] = useState('');
   const [editCanvasName, setEditCanvasName] = useState('');
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Save expanded state to localStorage
+  useEffect(() => {
+    localStorage.setItem('canvasSidebar-expanded', JSON.stringify(isExpanded));
+  }, [isExpanded]);
 
   const handleCreateCanvas = () => {
     if (newCanvasName.trim()) {

@@ -171,7 +171,7 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
           </Card>
 
           {/* Danger Zone - Compact */}
-          <Card className="border-2 border-red-200 bg-red-50/30">
+          <Card>
             <CardHeader>
               <CardTitle className="text-red-600 font-bold">Danger Zone</CardTitle>
             </CardHeader>

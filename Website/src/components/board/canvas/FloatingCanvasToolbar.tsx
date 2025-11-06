@@ -280,15 +280,13 @@ export function FloatingCanvasToolbar({
         )}
 
         {/* Save Status & Button */}
-        <div className="flex items-center gap-2 px-2 border-r border-border">
-          {isSaving && (
+        <div className="flex items-center justify-center gap-2 px-4 border-r border-border min-w-[110px]">
+          {isSaving ? (
             <div className="flex items-center gap-1.5">
               <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground" />
               <span className="text-xs text-muted-foreground">Saving...</span>
             </div>
-          )}
-          
-          {!isSaving && hasUnsavedChanges && (
+          ) : hasUnsavedChanges ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -311,11 +309,9 @@ export function FloatingCanvasToolbar({
                 <p className="text-xs">Save Changes (Ctrl + S)</p>
               </TooltipContent>
             </Tooltip>
-          )}
-
-          {!isSaving && !hasUnsavedChanges && showSaveStatus && (
-            <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full bg-green-500" />
+          ) : (
+            <div className="flex items-center gap-1.5 h-9 px-1">
+              <Save className="h-3 w-3 text-green-400 opacity-70" />
               <span className="text-xs text-muted-foreground">Saved</span>
             </div>
           )}

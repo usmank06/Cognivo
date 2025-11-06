@@ -63,7 +63,7 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localScript]);
 
-  const saveScript = async (scriptToSave: string) => {
+  const saveScript = async (scriptToSave: string, showNotification: boolean = false) => {
     setIsSaving(true);
     try {
       const response = await fetch(
@@ -80,7 +80,9 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
       if (data.success) {
         setHasUnsavedChanges(false);
         onScriptChange(scriptToSave);
-        toast.success('Canvas saved successfully!');
+        if (showNotification) {
+          toast.success('Canvas saved successfully!');
+        }
       } else {
         toast.error('Failed to save changes');
       }
@@ -100,7 +102,7 @@ export function CanvasArea({ canvas, username, script, onScriptChange }: CanvasA
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
-    saveScript(localScript);
+    saveScript(localScript, true);
   };
 
   const handleExportJSON = () => {

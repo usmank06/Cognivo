@@ -17,6 +17,7 @@ interface Message {
 
 interface Chat {
   id: string;
+  title?: string;
   messages: Message[];
   createdAt: Date;
 }
@@ -330,6 +331,12 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                       }
                     );
                     
+                    // Check if chat needs a title (only user + assistant message, no title yet)
+                    // Note: Check before updating state. For a new chat, messages.length will be 0 in state
+                    // but we just saved the user message, so this will be the first assistant response
+                    const currentChat = chats.find(c => c.id === currentChatId);
+                    const needsTitle = currentChat && currentChat.messages.length === 0 && !currentChat.title;
+                    
                     // Update local state
                     setChats(prevChats => prevChats.map(chat => {
                       if (chat.id === currentChatId) {
@@ -344,6 +351,55 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                       }
                       return chat;
                     }));
+                    
+                    // Generate title if this chat doesn't have one yet and this is the first response
+                    if (needsTitle) {
+                      // This was the first user message, generate a title
+                      console.log('🎯 Generating title for first message:', userMessage);
+                      try {
+                        const titleResponse = await fetch('http://localhost:8000/api/chat/generate-title', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ user_message: userMessage }),
+                        });
+                        
+                        if (titleResponse.ok) {
+                          const { title } = await titleResponse.json();
+                          console.log('✅ Generated title:', title);
+                          
+                          // Update title in database
+                          await fetch(
+                            `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/chat/${currentChatId}/title`,
+                            {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ title }),
+                            }
+                          );
+                          
+                          // Update local state
+                          setChats(prevChats => prevChats.map(chat => {
+                            if (chat.id === currentChatId) {
+                              return { ...chat, title };
+                            }
+                            return chat;
+                          }));
+                          
+                          console.log('💾 Title saved and updated in UI');
+                        } else {
+                          console.error('❌ Title generation failed:', await titleResponse.text());
+                        }
+                      } catch (error) {
+                        console.error('❌ Failed to generate title:', error);
+                      }
+                    } else {
+                      const currentChatForLog = chats.find(c => c.id === currentChatId);
+                      console.log('⏭️ Skipping title generation:', {
+                        messageCount: currentChatForLog?.messages.length,
+                        hasTitle: !!currentChatForLog?.title,
+                        title: currentChatForLog?.title
+                      });
+                    }
                     
                     // If we have a canvas edit duration stored, add it now after the assistant message
                     if (typeof canvasEditStartTime.current === 'number' && canvasEditStartTime.current > 0) {
@@ -497,10 +553,12 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a chat" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent style={{ maxWidth: `${width - 40}px` }}>
                     {chats.map((chat, index) => (
                       <SelectItem key={chat.id} value={chat.id}>
-                        Chat {index + 1} ({chat.messages.length} msgs)
+                        <div className="truncate whitespace-nowrap overflow-hidden w-full">
+                          {chat.title || `Chat ${index + 1}`}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>

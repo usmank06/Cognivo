@@ -420,6 +420,46 @@ async def process_excel_file(file_bytes: bytes, file_name: str, username: str) -
 # AI CHAT ENDPOINTS
 # ============================================
 
+class ChatTitleRequest(BaseModel):
+    user_message: str
+
+@app.post("/api/chat/generate-title")
+async def generate_chat_title(request: ChatTitleRequest):
+    """
+    Generate an emoji + short title for a chat based on the user's first message
+    """
+    if not anthropic_client:
+        raise HTTPException(status_code=500, detail="Anthropic API key not configured")
+    
+    try:
+        response = await anthropic_client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=100,
+            temperature=0.7,
+            messages=[{
+                "role": "user",
+                "content": f"""Generate a short, catchy title (max 4-5 words) with a relevant emoji for a chat conversation that starts with this message:
+
+"{request.user_message}"
+
+Respond with ONLY the emoji + title, nothing else. Examples:
+- 📊 Sales Analytics Dashboard
+- 💰 Budget Planning Report
+- 🎨 Design Portfolio Review
+- 📈 Q4 Performance Metrics
+
+Your response:"""
+            }]
+        )
+        
+        title = response.content[0].text.strip()
+        return {"title": title}
+        
+    except Exception as e:
+        print(f"Error generating title: {str(e)}")
+        # Return a fallback title
+        return {"title": "💬 New Chat"}
+
 @app.post("/api/chat/stream")
 async def stream_chat(request: CanvasUpdateRequest):
     """

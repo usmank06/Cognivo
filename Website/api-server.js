@@ -30,6 +30,7 @@ import {
   updateCanvasThumbnail,
   addChatToCanvas,
   addMessageToChat,
+  updateChatTitle,
   deleteCanvas,
   getCanvasStats,
 } from './src/db/canvasManager.ts';
@@ -204,6 +205,18 @@ app.post('/api/canvas/:username/:canvasId/chat/:chatId/message', async (req, res
     const { username, canvasId, chatId } = req.params;
     const { role, content } = req.body;
     const result = await addMessageToChat(canvasId, username, chatId, role, content);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Update chat title
+app.patch('/api/canvas/:username/:canvasId/chat/:chatId/title', async (req, res) => {
+  try {
+    const { username, canvasId, chatId } = req.params;
+    const { title } = req.body;
+    const result = await updateChatTitle(canvasId, username, chatId, title);
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, error: 'Server error' });

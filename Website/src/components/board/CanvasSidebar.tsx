@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ScrollArea } from '../ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
@@ -33,7 +34,9 @@ export function CanvasSidebar({
   });
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editingCanvas, setEditingCanvas] = useState<Canvas | null>(null);
+  const [deletingCanvas, setDeletingCanvas] = useState<Canvas | null>(null);
   const [newCanvasName, setNewCanvasName] = useState('');
   const [editCanvasName, setEditCanvasName] = useState('');
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -194,9 +197,8 @@ export function CanvasSidebar({
                               className="h-6 w-6 p-0 text-destructive hover:text-destructive/80"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (canvases.length > 1 || window.confirm('Delete this canvas?')) {
-                                  onDeleteCanvas(canvas.id);
-                                }
+                                setDeletingCanvas(canvas);
+                                setIsDeleteOpen(true);
                               }}
                             >
                               <Trash2 className="h-3 w-3" />
@@ -254,6 +256,33 @@ export function CanvasSidebar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Canvas Confirmation */}
+      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Canvas</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingCanvas?.name}"? This will move it to deleted canvases. You can't undo this action.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (deletingCanvas) {
+                  onDeleteCanvas(deletingCanvas.id);
+                  setDeletingCanvas(null);
+                  setIsDeleteOpen(false);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Canvas
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -278,6 +278,41 @@ export async function addMessageToChat(
 }
 
 /**
+ * Update chat title
+ */
+export async function updateChatTitle(
+  canvasId: string,
+  username: string,
+  chatId: string,
+  title: string
+) {
+  try {
+    await ensureConnected();
+    
+    const canvas = await Canvas.findOne({ _id: canvasId, username });
+    
+    if (!canvas) {
+      return { success: false, error: 'Canvas not found' };
+    }
+    
+    const chat = canvas.chats.find(c => c.id === chatId);
+    
+    if (!chat) {
+      return { success: false, error: 'Chat not found' };
+    }
+    
+    chat.title = title;
+    canvas.updatedAt = new Date();
+    await canvas.save();
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Update chat title error:', error);
+    return { success: false, error: 'Failed to update chat title' };
+  }
+}
+
+/**
  * Soft delete a canvas
  */
 export async function deleteCanvas(canvasId: string, username: string) {

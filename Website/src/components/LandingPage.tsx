@@ -23,14 +23,14 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
           <div className="flex gap-4 justify-center items-center pt-2">
             <Button 
               onClick={() => onNavigate('login')}
-              className="px-8 py-4 text-base rounded-lg font-semibold shadow-md hover:shadow-lg transition-shadow h-auto"
+              variant="outline"
+              className="px-8 py-4 text-base rounded-lg font-semibold border-2 hover:bg-secondary/50 transition-colors h-auto"
             >
               Login
             </Button>
             <Button 
               onClick={() => onNavigate('register')}
-              variant="outline"
-              className="px-8 py-4 text-base rounded-lg font-semibold border-2 hover:bg-secondary/50 transition-colors h-auto"
+              className="px-8 py-4 text-base rounded-lg font-semibold border-2 border-transparent shadow-md hover:shadow-lg transition-shadow h-auto"
             >
               Get Started <ArrowRight className="ml-2 h-4 w-4" />
             </Button>

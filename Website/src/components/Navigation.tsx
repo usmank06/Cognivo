@@ -22,7 +22,7 @@ export function Navigation({ currentPage, isLoggedIn, onNavigate }: NavigationPr
       ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-border shadow-sm">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-sm border-b border-border shadow-sm">
       <div className="grid grid-cols-4 h-16">
         {menuItems.map((item, index) => (
           <button

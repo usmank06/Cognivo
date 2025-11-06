@@ -17,6 +17,7 @@ interface SettingsPageProps {
 export function SettingsPage({ username, onLogout }: SettingsPageProps) {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -159,7 +160,7 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
                 Change Password
               </Button>
               <Button 
-                onClick={onLogout}
+                onClick={() => setIsLogoutDialogOpen(true)}
                 variant="outline"
                 className="w-full justify-start"
               >
@@ -236,6 +237,24 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Logout Confirmation */}
+      <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log Out</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to log out?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={onLogout}>
+              Log Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Account Confirmation */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

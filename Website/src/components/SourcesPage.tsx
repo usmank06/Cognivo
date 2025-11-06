@@ -221,14 +221,14 @@ export function SourcesPage({ username, userId }: SourcesPageProps) {
         return (
           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
             <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-            Processing
+            Processing · {file.processingProgress}%
           </Badge>
         );
       case 'uploading':
         return (
           <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
             <Clock className="h-3 w-3 mr-1" />
-            Uploading
+            Uploading · {file.processingProgress}%
           </Badge>
         );
       case 'error':
@@ -431,14 +431,9 @@ export function SourcesPage({ username, userId }: SourcesPageProps) {
 
                         {/* Processing progress */}
                         {(file.status === 'processing' || file.status === 'uploading') && (
-                          <div className="mt-3 space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">
-                                {file.processingStage || 'Processing...'}
-                              </span>
-                              <span className="text-muted-foreground">
-                                {file.processingProgress}%
-                              </span>
+                          <div className="mt-4 space-y-1">
+                            <div className="text-sm text-muted-foreground pt-1">
+                              {file.processingStage || 'Preparing file...'}
                             </div>
                             <Progress value={file.processingProgress || 0} />
                           </div>

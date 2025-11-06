@@ -399,6 +399,33 @@ html, :host {
   background: radial-gradient(circle at center, var(--tw-gradient-stops));
 }
 
+/* Animation for spinner */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Additional padding-top utilities */
+.pt-1 {
+  padding-top: calc(var(--spacing) * 1);
+}
+
+.pt-2 {
+  padding-top: calc(var(--spacing) * 2);
+}
+
+.pt-3 {
+  padding-top: calc(var(--spacing) * 3);
+}
+
   :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) h1 {
     font-size: var(--text-2xl);
     font-weight: var(--font-weight-medium);

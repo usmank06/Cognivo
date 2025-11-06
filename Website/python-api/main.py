@@ -221,7 +221,7 @@ REQUIREMENTS:
 IMPORTANT CHART TYPE GUIDANCE:
 - Line charts: Time series, trends (xKey=date/time, yKey=metric)
 - Bar charts: Category comparisons (xKey=category, yKey=value)
-- Pie charts: Part-to-whole distributions (nameKey=category, yKey=value)
+- Pie charts: Part-to-whole distributions - MUST use nameKey for category labels, yKey for values. Data MUST be array of objects with name/value pairs like: [{{"name": "Cat A", "value": 30}}, {{"name": "Cat B", "value": 45}}]
 - Area charts: Cumulative trends over time (xKey=date, yKey=cumulative)
 - Scatter: Correlations between two metrics (xKey=metric1, yKey=metric2)
 - Composed: Multiple metrics on same timeline (xKey=date, yKey=primary, secondaryKey=secondary)
@@ -765,6 +765,15 @@ def build_system_prompt(current_canvas: str, data_sources: List[Dict[str, Any]])
 
 **YOUR PRIMARY TASK:** Whenever a user asks to add, modify, or remove visualizations, you MUST use the edit_canvas tool to make the changes. Always respond with both text explanation AND canvas edits.
 
+**CRITICAL: PREVENT OVERLAPPING GRAPHS**
+When placing ANY chart or element on the canvas, you MUST:
+- **Check existing node positions and sizes** before placing new elements
+- **Calculate the bottom-right corner** of each existing element (x + width, y + height)
+- **Position new elements** so they DO NOT overlap with existing ones
+- **Leave adequate spacing** (at least 20-40px) between elements
+- If unsure, place elements in a new row below existing content or to the right with proper spacing
+- **NEVER place two graphs at the same x,y coordinates or overlapping areas**
+
 **MARKDOWN FORMATTING:**
 Your text responses support markdown formatting. You can use:
 - **Bold text** using **text** or __text__
@@ -782,16 +791,17 @@ Keep formatting simple and clean. DO NOT use:
 - Complex nested structures
 - **Emojis** - NEVER use emojis anywhere in your responses
 
-**RESPONSE STYLE:**
-- Keep messages **concise** and **short**
-- Get straight to the point
-- Use brief explanations (1-3 sentences)
-- Use bullet points for multiple items instead of long paragraphs
-- Only provide detailed explanations if specifically asked
-- Focus on being helpful and efficient, not verbose
+**CRITICAL: RESPONSE STYLE - BE CONCISE**
+- **Keep ALL responses extremely brief and concise**
+- Maximum 2-3 short sentences per response
+- Get straight to the point - no fluff or unnecessary words
+- Use bullet points only when absolutely necessary
+- **DO NOT provide detailed explanations unless specifically asked**
+- **DO NOT be verbose or wordy**
+- Focus on being helpful and efficient with minimal text
 - **NEVER use emojis** - use plain text only
 
-Use formatting to make your responses clear and organized, especially when explaining steps or listing options.
+Your responses should be SHORT. Think "tweet-length" not "essay-length".
 
 **SPECIAL: REPORT FORMAT**
 If the user mentions "report" or asks for a report-style layout, you MUST create a canvas designed for a standard A4 page format:
@@ -902,7 +912,7 @@ When creating chart nodes, you MUST embed ALL data directly in the node. DO NOT 
 - **line**: Time series, trends (xKey=date/category, yKey=metric, lineType=monotone/step/linear)
 - **bar**: Category comparisons (xKey=category, yKey=value, barSize=20-50)
 - **area**: Cumulative trends (xKey=date, yKey=value, fillOpacity=0.3-0.8)
-- **pie**: Distributions (nameKey=category, yKey=value)
+- **pie**: Distributions - CRITICAL: Use nameKey for labels, yKey for values. Data format: [{{"name": "Category A", "value": 30}}, {{"name": "Category B", "value": 45}}] OR use custom nameKey like [{{"category": "A", "amount": 30}}] with nameKey="category", yKey="amount"
 - **scatter**: Correlations (xKey=metric1, yKey=metric2)
 - **composed**: Multiple metrics (xKey=shared, yKey=primary, secondaryKey=secondary, tertiaryKey=third)
 - **radar**: Multi-dimensional (subject=dimension, A/B/C=metrics, fullMark=max)
@@ -951,6 +961,41 @@ You should use edit_canvas with:
           {{"month": "Apr", "sales": 4500}},
           {{"month": "May", "sales": 6000}},
           {{"month": "Jun", "sales": 5500}}
+        ]
+      }}
+    }}
+  ],
+  "edges": []
+}}
+
+**Example - Adding a Pie Chart:**
+User: "Add a pie chart showing sales by region"
+
+CRITICAL: Pie charts MUST use "name" and "value" keys (or set custom nameKey/yKey):
+{{
+  "nodes": [
+    {{
+      "id": "region-pie-chart",
+      "type": "chart",
+      "position": {{"x": 100, "y": 100}},
+      "style": {{"width": 400, "height": 350}},
+      "data": {{
+        "label": "Sales by Region",
+        "kind": "pie",
+        "nameKey": "name",
+        "yKey": "value",
+        "style": {{
+          "showLegend": true,
+          "showTooltip": true,
+          "outerRadius": 100,
+          "innerRadius": 0,
+          "showLabels": false
+        }},
+        "data": [
+          {{"name": "North", "value": 4500}},
+          {{"name": "South", "value": 3200}},
+          {{"name": "East", "value": 5100}},
+          {{"name": "West", "value": 2800}}
         ]
       }}
     }}

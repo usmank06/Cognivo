@@ -5,7 +5,6 @@ import {
   Maximize2,
   Eye, 
   Code, 
-  MoreVertical,
   Download,
   Image as ImageIcon,
   FileText,
@@ -143,11 +142,11 @@ export function FloatingCanvasToolbar({
                 size="sm"
                 onClick={() => onViewModeChange('graph')}
                 className={cn(
-                  "h-9 w-9 p-0 rounded-full",
+                  "h-8 w-8 p-0 rounded-full",
                   viewMode === 'graph' && "bg-primary text-primary-foreground"
                 )}
               >
-                <Eye className="h-5 w-5" />
+                <Eye className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
@@ -162,11 +161,11 @@ export function FloatingCanvasToolbar({
                 size="sm"
                 onClick={() => onViewModeChange('code')}
                 className={cn(
-                  "h-9 w-9 p-0 rounded-full",
+                  "h-8 w-8 p-0 rounded-full",
                   viewMode === 'code' && "bg-primary text-primary-foreground"
                 )}
               >
-                <Code className="h-5 w-5" />
+                <Code className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
@@ -317,15 +316,15 @@ export function FloatingCanvasToolbar({
           )}
         </div>
 
-        {/* More Menu */}
+        {/* Export Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="inline-flex items-center justify-center h-9 w-9 p-0 rounded-full hover:bg-accent hover:text-accent-foreground transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg hover:bg-accent/50 transition-colors"
               type="button"
-              onClick={() => console.log('More menu button clicked')}
             >
-              <MoreVertical className="h-5 w-5" />
+              <Download className="h-3 w-3 text-muted-foreground opacity-70" />
+              <span className="text-xs text-muted-foreground">Export</span>
             </button>
           </DropdownMenuTrigger>
 

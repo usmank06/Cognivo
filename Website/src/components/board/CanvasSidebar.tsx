@@ -195,10 +195,14 @@ export function CanvasSidebar({
                           <Badge variant="outline" className="text-xs">
                             {(() => {
                               try {
-                                const script = JSON.parse(canvas.script || '{"nodes":[]}');
+                                if (!canvas.script) {
+                                  return '0 elements';
+                                }
+                                const script = JSON.parse(canvas.script);
                                 const nodeCount = script.nodes?.length || 0;
                                 return `${nodeCount} element${nodeCount !== 1 ? 's' : ''}`;
-                              } catch {
+                              } catch (error) {
+                                console.warn('Failed to parse canvas script for element count:', canvas.id);
                                 return '0 elements';
                               }
                             })()}

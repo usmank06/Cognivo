@@ -1379,6 +1379,14 @@ html, :host {
     padding-block: calc(var(--spacing) * 2);
   }
 
+  .py-3\.25 {
+    padding-block: calc(var(--spacing) * 3.25);
+  }
+
+  .py-3\.5 {
+    padding-block: calc(var(--spacing) * 3.5);
+  }
+
   .py-4 {
     padding-block: calc(var(--spacing) * 4);
   }

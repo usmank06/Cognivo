@@ -94,11 +94,12 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
   // Load chats when canvas changes
   useEffect(() => {
     const initializeChats = async () => {
-      if (currentCanvas && currentCanvas.chats !== undefined) {
-        console.log('🔄 Loading chats for canvas:', currentCanvas.id, 'Chat count:', currentCanvas.chats.length);
+      if (currentCanvas) {
+        const chatArray = currentCanvas.chats || [];
+        console.log('🔄 Loading chats for canvas:', currentCanvas.id, 'Chat count:', chatArray.length);
         
         // If no chats exist, create one immediately
-        if (currentCanvas.chats.length === 0) {
+        if (chatArray.length === 0) {
           console.log('⚡ No chats found, creating one now...');
           try {
             const response = await fetch(
@@ -125,8 +126,8 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
           }
         } else {
           // Normal case: chats exist, just load them
-          setChats(currentCanvas.chats);
-          setCurrentChatId(currentCanvas.chats[currentCanvas.chats.length - 1].id);
+          setChats(chatArray);
+          setCurrentChatId(chatArray[chatArray.length - 1].id);
         }
       } else {
         setChats([]);
@@ -135,7 +136,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
     };
     
     initializeChats();
-  }, [currentCanvas?.id]);
+  }, [currentCanvas?.id, username, onReloadCanvas]);
 
   // Load canvas edit events from localStorage when chat changes
   useEffect(() => {

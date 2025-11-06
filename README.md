@@ -15,7 +15,7 @@ Transform your spreadsheets into intelligent, interactive visualizations using t
 
 ## 🎥 Demo Video
 
-[Watch Demo](./Media/demo.mp4)
+![Demo Gif](./Media/demo.gif)
 
 *Watch how Cognivo transforms raw data into insights in seconds*
 

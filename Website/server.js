@@ -2,7 +2,6 @@ import { connectDB } from './src/db/mongodb.ts';
 
 console.log('🚀 Starting MongoDB...\n');
 
-// Start MongoDB
 const connection = await connectDB();
 
 console.log('\n✅ Setup Complete!');

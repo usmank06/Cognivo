@@ -41,10 +41,10 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
       totalTokensSpent: userData?.totalTokensSpent || 0,
       totalMoneySpent: userData?.totalMoneySpent || 0,
       downloadDate: new Date().toISOString(),
-      boards: [],
+      canvases: [],
       sources: [],
     };
-    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataStr = JSON.stringify(data, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
     const a = document.createElement('a');
     a.href = dataUri;

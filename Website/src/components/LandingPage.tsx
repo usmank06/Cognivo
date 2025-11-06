@@ -18,7 +18,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             <span className="text-primary">Cognivo</span>
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-normal">
-            Transform your data into interactive visual boards. Connect sources and uncover insights effortlessly.
+            Transform your data into interactive visual canvases. Connect sources and uncover insights effortlessly.
           </p>
           <div className="flex gap-4 justify-center items-center pt-2">
             <Button 

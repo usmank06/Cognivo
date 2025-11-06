@@ -6,7 +6,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
-import type { Canvas } from '../BoardPage';
+import type { Canvas } from '../CanvasPage';
 
 interface Message {
   role: 'user' | 'assistant';

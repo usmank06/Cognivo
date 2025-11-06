@@ -3,13 +3,13 @@ import { Navigation } from './components/Navigation';
 import { LandingPage } from './components/LandingPage';
 import { LoginPage } from './components/LoginPage';
 import { RegisterPage } from './components/RegisterPage';
-import { BoardPage } from './components/BoardPage';
+import { CanvasPage } from './components/CanvasPage';
 import { SourcesPage } from './components/SourcesPage';
 import { SettingsPage } from './components/SettingsPage';
 import { Footer } from './components/Footer';
 import { Toaster } from './components/ui/sonner';
 
-type Page = 'landing' | 'login' | 'register' | 'board' | 'sources' | 'settings';
+type Page = 'landing' | 'login' | 'register' | 'canvas' | 'sources' | 'settings';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('landing');
@@ -26,7 +26,7 @@ export default function App() {
         setUsername(session.username);
         setUserData(session.userData);
         setIsLoggedIn(true);
-        setCurrentPage(session.lastPage || 'board');
+        setCurrentPage(session.lastPage || 'canvas');
       } catch (error) {
         console.error('Failed to restore session:', error);
         localStorage.removeItem('userSession');
@@ -50,14 +50,14 @@ export default function App() {
     setUsername(user);
     setUserData(data);
     setIsLoggedIn(true);
-    setCurrentPage('board');
+    setCurrentPage('canvas');
   };
 
   const handleRegister = (user: string, data: any) => {
     setUsername(user);
     setUserData(data);
     setIsLoggedIn(true);
-    setCurrentPage('board');
+    setCurrentPage('canvas');
   };
 
   const handleLogout = () => {
@@ -80,8 +80,8 @@ export default function App() {
         return <LoginPage onLogin={handleLogin} onNavigate={handleNavigate} />;
       case 'register':
         return <RegisterPage onRegister={handleRegister} onNavigate={handleNavigate} />;
-      case 'board':
-        return <BoardPage username={username} userId={userData?.id || ''} />;
+      case 'canvas':
+        return <CanvasPage username={username} userId={userData?.id || ''} />;
       case 'sources':
         return <SourcesPage username={username} userId={userData?.id || ''} />;
       case 'settings':

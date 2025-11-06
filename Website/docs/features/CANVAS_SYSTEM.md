@@ -96,7 +96,7 @@ POST   /api/canvas/:username/:canvasId/chat/:chatId/message     // Add message t
 
 ## Frontend Components
 
-### BoardPage.tsx
+### CanvasPage.tsx
 **Main orchestrator for canvas system**
 
 **Responsibilities:**
@@ -142,7 +142,7 @@ useEffect(() => {
 }, [localScript]);
 ```
 
-### BoardSidebar.tsx
+### CanvasSidebar.tsx
 **Canvas list and management UI**
 
 **Features:**
@@ -196,7 +196,7 @@ getCanvasStats(username)                     // Statistics
 ## Usage Flow
 
 ### User Creates Canvas
-1. User clicks "New Canvas" in BoardSidebar
+1. User clicks "New Canvas" in CanvasSidebar
 2. Dialog appears, user enters name
 3. `handleCreateCanvas()` calls API
 4. Database creates canvas with empty script
@@ -212,9 +212,9 @@ getCanvasStats(username)                     // Statistics
 6. User can continue editing (process repeats)
 
 ### User Switches Canvas
-1. User selects different canvas in BoardSidebar
+1. User selects different canvas in CanvasSidebar
 2. `handleSelectCanvas()` updates currentCanvas
-3. BoardPage calls `loadCanvasDetails()` to fetch full data
+3. CanvasPage calls `loadCanvasDetails()` to fetch full data
 4. CanvasArea loads new script
 5. ChatSidebar loads chats for new canvas
 
@@ -267,7 +267,7 @@ npm run dev
 
 # In browser:
 1. Login
-2. Navigate to Board page
+2. Navigate to Canvas page
 3. Click "New Canvas"
 4. Enter name "Test Canvas"
 5. Canvas appears in sidebar

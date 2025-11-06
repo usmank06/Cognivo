@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChatSidebar } from './board/ChatSidebar';
-import { BoardSidebar } from './board/BoardSidebar';
+import { CanvasSidebar } from './board/CanvasSidebar';
 import { CanvasArea } from './board/CanvasArea';
 import { toast } from 'sonner';
 
@@ -16,12 +16,12 @@ export interface Canvas {
   chats?: any[];
 }
 
-interface BoardPageProps {
+interface CanvasPageProps {
   username: string;
   userId: string;
 }
 
-export function BoardPage({ username, userId }: BoardPageProps) {
+export function CanvasPage({ username, userId }: CanvasPageProps) {
   const [canvases, setCanvases] = useState<Canvas[]>([]);
   const [currentCanvas, setCurrentCanvas] = useState<Canvas | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -220,7 +220,7 @@ export function BoardPage({ username, userId }: BoardPageProps) {
         )}
       </div>
 
-      <BoardSidebar
+      <CanvasSidebar
         canvases={canvases}
         currentCanvas={currentCanvas}
         onSelectCanvas={handleSelectCanvas}

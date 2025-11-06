@@ -40,7 +40,7 @@ This starts:
 
 1. Open http://localhost:5173
 2. Login or register
-3. Go to "Board" page
+3. Go to "Canvas" page
 4. Create a new canvas
 5. Click "New Chat" button
 6. Try these prompts:

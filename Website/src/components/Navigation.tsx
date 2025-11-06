@@ -13,7 +13,7 @@ export function Navigation({ currentPage, isLoggedIn, onNavigate }: NavigationPr
   const menuItems: MenuItem[] = isLoggedIn
     ? [
         { id: 'landing', label: 'Cognivo' },
-        { id: 'board', label: 'Board' },
+        { id: 'canvas', label: 'Canvas' },
         { id: 'sources', label: 'Sources' },
         { id: 'settings', label: 'Settings' },
       ]

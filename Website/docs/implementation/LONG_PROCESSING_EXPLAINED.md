@@ -298,7 +298,7 @@ async def process_csv_file(file_bytes: bytes, file_name: str):
 
 Then:
 1. Upload a file
-2. Navigate to Board page
+2. Navigate to Canvas page
 3. Wait 5 seconds
 4. Go back to Sources
 5. See it still processing or completed!

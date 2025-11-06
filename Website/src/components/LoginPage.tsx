@@ -47,7 +47,7 @@ export function LoginPage({ onLogin, onNavigate }: LoginPageProps) {
       <Card className="w-full max-w-md relative z-10 shadow-lg border-2 rounded-2xl">
         <CardHeader className="space-y-2 text-center pb-4">
           <CardTitle className="text-3xl font-bold text-foreground">Welcome Back</CardTitle>
-          <CardDescription className="text-base text-muted-foreground">Enter your credentials to access your boards</CardDescription>
+          <CardDescription className="text-base text-muted-foreground">Enter your credentials to access your canvases</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-5">

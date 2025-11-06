@@ -64,7 +64,7 @@ This starts both MongoDB and the Vite dev server.
 ### Logging In
 1. Click "Login" from landing page
 2. Enter username and password
-3. You'll be redirected to the board page
+3. You'll be redirected to the canvas page
 
 ### Settings Page
 Access via navigation menu when logged in. Features:

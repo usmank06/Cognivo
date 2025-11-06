@@ -7,9 +7,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
-import type { Canvas } from '../BoardPage';
+import type { Canvas } from '../CanvasPage';
 
-interface BoardSidebarProps {
+interface CanvasSidebarProps {
   canvases: Canvas[];
   currentCanvas: Canvas | null;
   onSelectCanvas: (canvas: Canvas) => void;
@@ -18,14 +18,14 @@ interface BoardSidebarProps {
   onDeleteCanvas: (id: string) => void;
 }
 
-export function BoardSidebar({ 
+export function CanvasSidebar({ 
   canvases, 
   currentCanvas, 
   onSelectCanvas, 
   onCreateCanvas,
   onRenameCanvas,
   onDeleteCanvas 
-}: BoardSidebarProps) {
+}: CanvasSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);

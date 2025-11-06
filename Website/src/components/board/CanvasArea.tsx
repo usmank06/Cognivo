@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import type { Canvas } from '../BoardPage';
+import type { Canvas } from '../CanvasPage';
 import { GraphCanvas, GraphCanvasHandle } from './canvas/GraphCanvas';
 import { FloatingCanvasToolbar } from './canvas/FloatingCanvasToolbar';
 

@@ -13,7 +13,7 @@
 │  3. User sees: [====40%====>] "Processing..."              │
 │     ↓                                                       │
 │  4. USER CAN NOW:                                          │
-│     • Go to Board page        ✅                           │
+│     • Go to Canvas page       ✅                           │
 │     • Go to Settings          ✅                           │
 │     • Close browser           ✅                           │
 │     • Come back later         ✅                           │
@@ -83,7 +83,7 @@ Time    User                    Server                      Database
 0:01    Navigate to Board      🔄 Still processing...       progress: 20%
         (polls every 2s)                                    
 
-0:02    On Board page          🔄 Call Python API          progress: 40%
+0:02    On Canvas page         🔄 Call Python API          progress: 40%
                                 (waiting for Python...)     
 
 1:00    Still on Board         ⏳ Python processing...     progress: 40%

@@ -152,7 +152,7 @@ npm run dev
 
 1. Go to: http://localhost:5173
 2. Login or register
-3. Navigate to "Board" page
+3. Navigate to "Canvas" page
 4. Create a new canvas (if you don't have one)
 5. In the left sidebar, click "New Chat"
 6. Type a test message:

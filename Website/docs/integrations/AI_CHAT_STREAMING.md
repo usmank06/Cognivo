@@ -511,7 +511,7 @@ You'll see streaming JSON events in the response.
 
 1. Start all servers: `npm run dev`
 2. Login to application
-3. Go to Board page
+3. Go to Canvas page
 4. Create a new canvas
 5. Click "New Chat" in ChatSidebar
 6. Type: "Add a text node saying Hello World"

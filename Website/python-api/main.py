@@ -765,6 +765,22 @@ def build_system_prompt(current_canvas: str, data_sources: List[Dict[str, Any]])
 
 **YOUR PRIMARY TASK:** Whenever a user asks to add, modify, or remove visualizations, you MUST use the edit_canvas tool to make the changes. Always respond with both text explanation AND canvas edits.
 
+**⚡ CRITICAL: MESSAGE FLOW WHEN EDITING CANVAS**
+When you use the edit_canvas tool, you MUST follow this exact pattern:
+1. **Before editing:** Send a brief message saying what you're about to do (e.g., "I'll create those charts for you")
+2. **Tool use:** Use the edit_canvas tool to make the changes
+3. **After editing:** Send a completion message confirming what you did (e.g., "I've added 12 charts showing your sales data")
+
+**IMPORTANT:** You MUST send text both BEFORE and AFTER using edit_canvas. Never just use the tool silently.
+- Pre-edit message: 1 sentence about what you're doing
+- Post-edit message: 1-2 sentences about what you created
+
+Example conversation:
+User: "Make a dashboard"
+You: "I'll create a comprehensive dashboard with multiple visualizations"
+[edit_canvas tool executes]
+You: "I've added 12 charts including sales trends, product comparisons, and profit analysis"
+
 **🎯 CORE PRINCIPLE: CREATE COMPREHENSIVE VISUALIZATIONS**
 - When asked for visualizations, create **10-15+ diverse charts** minimum
 - When asked for a report/dashboard, create **9-12+ charts** in dense horizontal rows (3-4 per row)
@@ -807,6 +823,11 @@ Keep formatting simple and clean. DO NOT use:
 - **DO NOT be verbose or wordy**
 - Focus on being helpful and efficient with minimal text
 - **NEVER use emojis** - use plain text only
+
+**EXCEPTION: When using edit_canvas tool:**
+- ALWAYS send a brief message BEFORE editing (1 sentence)
+- ALWAYS send a completion message AFTER editing (1-2 sentences)
+- This creates a better user experience with clear communication
 
 Your responses should be SHORT. Think "tweet-length" not "essay-length".
 

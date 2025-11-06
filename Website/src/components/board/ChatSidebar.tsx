@@ -340,6 +340,10 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
       const decoder = new TextDecoder();
       let buffer = '';
       let assistantText = '';
+      let messageSegments: Array<{ type: 'text' | 'edit', content: string, timestamp?: Date }> = [];
+      let currentSegmentText = '';
+      let hasUsedTool = false;
+      let toolExplanation = ''; // Store explanation from canvas_update event
 
       if (reader) {
         while (true) {
@@ -361,13 +365,54 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
               switch (event.type) {
                 case 'text_delta':
                   // Stream text word by word
+                  currentSegmentText += event.text;
                   assistantText += event.text;
-                  setStreamingText(assistantText);
+                  setStreamingText(currentSegmentText); // Show only current segment, not accumulated
                   break;
                   
                 case 'tool_start':
                   // Show "Editing canvas..." spinner
                   console.log('🔧 Tool started:', event.tool_name);
+                  
+                  // Save any text accumulated BEFORE tool use as a message segment
+                  if (currentSegmentText.trim()) {
+                    console.log('💬 Saving pre-edit message segment:', currentSegmentText.substring(0, 50) + '...');
+                    messageSegments.push({ 
+                      type: 'text', 
+                      content: currentSegmentText.trim(),
+                      timestamp: new Date()
+                    });
+                    
+                    // Save this pre-edit message to database immediately
+                    await fetch(
+                      `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/chat/${currentChatId}/message`,
+                      {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ role: 'assistant', content: currentSegmentText.trim() }),
+                      }
+                    );
+                    
+                    // Update local state to show the pre-edit message
+                    setChats(prevChats => prevChats.map(chat => {
+                      if (chat.id === currentChatId) {
+                        return {
+                          ...chat,
+                          messages: [...chat.messages, {
+                            role: 'assistant' as const,
+                            content: currentSegmentText.trim(),
+                            timestamp: new Date(),
+                          }],
+                        };
+                      }
+                      return chat;
+                    }));
+                    
+                    currentSegmentText = '';
+                    setStreamingText(''); // Clear streaming text to prepare for next segment
+                  }
+                  
+                  hasUsedTool = true;
                   setIsEditingCanvas(true);
                   canvasEditStartTime.current = Date.now();
                   break;
@@ -382,6 +427,11 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                   console.log('🎨 Canvas update received, saving to database...');
                   console.log('Canvas JSON:', event.canvas);
                   console.log('Explanation:', event.explanation);
+                  
+                  // Store the explanation to use as fallback message
+                  if (event.explanation) {
+                    toolExplanation = event.explanation;
+                  }
                   
                   const updateResponse = await fetch(
                     `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/script`,
@@ -424,8 +474,97 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                   setIsStreaming(false);
                   setIsEditingCanvas(false);
                   
-                  // Save assistant message to database
-                  if (assistantText.trim()) {
+                  // Save any remaining text after tool use as final message segment
+                  if (currentSegmentText.trim()) {
+                    console.log('💬 Saving post-edit message segment:', currentSegmentText.substring(0, 50) + '...');
+                    messageSegments.push({ 
+                      type: 'text', 
+                      content: currentSegmentText.trim(),
+                      timestamp: new Date()
+                    });
+                  }
+                  // If no post-edit text but we have a tool explanation, use that
+                  else if (hasUsedTool && !currentSegmentText.trim() && toolExplanation.trim()) {
+                    console.log('💬 Using tool explanation as post-edit message:', toolExplanation.substring(0, 50) + '...');
+                    currentSegmentText = toolExplanation;
+                    messageSegments.push({ 
+                      type: 'text', 
+                      content: toolExplanation.trim(),
+                      timestamp: new Date()
+                    });
+                  }
+                  
+                  // Save post-edit message to database (if any text after tool use)
+                  if (hasUsedTool && currentSegmentText.trim()) {
+                    await fetch(
+                      `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/chat/${currentChatId}/message`,
+                      {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ role: 'assistant', content: currentSegmentText.trim() }),
+                      }
+                    );
+                    
+                    // Update local state
+                    setChats(prevChats => prevChats.map(chat => {
+                      if (chat.id === currentChatId) {
+                        return {
+                          ...chat,
+                          messages: [...chat.messages, {
+                            role: 'assistant' as const,
+                            content: currentSegmentText.trim(),
+                            timestamp: new Date(),
+                          }],
+                        };
+                      }
+                      return chat;
+                    }));
+                    
+                    // Add canvas edit event tracking after the post-edit message
+                    if (typeof canvasEditStartTime.current === 'number' && canvasEditStartTime.current > 0) {
+                      setTimeout(() => {
+                        setChats(currentChats => {
+                          const currentChat = currentChats.find(c => c.id === currentChatId);
+                          // The edit event should appear BEFORE the post-edit message
+                          // So we use messages.length - 1 (the pre-edit message index + 1)
+                          const messageIndex = currentChat ? currentChat.messages.length - 1 : 0;
+                          
+                          setCanvasEditEvents(prev => [...prev, {
+                            duration: canvasEditStartTime.current as number,
+                            timestamp: new Date(),
+                            messageIndex,
+                          }]);
+                          
+                          return currentChats;
+                        });
+                        
+                        canvasEditStartTime.current = null;
+                      }, 100);
+                    }
+                  }
+                  // If tool was used but no post-edit message, still track the edit event
+                  else if (hasUsedTool) {
+                    if (typeof canvasEditStartTime.current === 'number' && canvasEditStartTime.current > 0) {
+                      setTimeout(() => {
+                        setChats(currentChats => {
+                          const currentChat = currentChats.find(c => c.id === currentChatId);
+                          const messageIndex = currentChat ? currentChat.messages.length : 0;
+                          
+                          setCanvasEditEvents(prev => [...prev, {
+                            duration: canvasEditStartTime.current as number,
+                            timestamp: new Date(),
+                            messageIndex,
+                          }]);
+                          
+                          return currentChats;
+                        });
+                        
+                        canvasEditStartTime.current = null;
+                      }, 100);
+                    }
+                  }
+                  // If no tool was used, save all text as one message
+                  else if (!hasUsedTool && assistantText.trim()) {
                     await fetch(
                       `http://localhost:3001/api/canvas/${username}/${currentCanvas.id}/chat/${currentChatId}/message`,
                       {
@@ -503,27 +642,6 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                         hasTitle: !!currentChatForLog?.title,
                         title: currentChatForLog?.title
                       });
-                    }
-                    
-                    // If we have a canvas edit duration stored, add it now after the assistant message
-                    if (typeof canvasEditStartTime.current === 'number' && canvasEditStartTime.current > 0) {
-                      // Use setTimeout to ensure state update has completed
-                      setTimeout(() => {
-                        setChats(currentChats => {
-                          const currentChat = currentChats.find(c => c.id === currentChatId);
-                          const messageIndex = currentChat ? currentChat.messages.length : 0;
-                          
-                          setCanvasEditEvents(prev => [...prev, {
-                            duration: canvasEditStartTime.current as number,
-                            timestamp: new Date(),
-                            messageIndex,
-                          }]);
-                          
-                          return currentChats;
-                        });
-                        
-                        canvasEditStartTime.current = null;
-                      }, 100);
                     }
                   }
                   

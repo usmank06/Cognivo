@@ -9,6 +9,13 @@
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
       <title>Cognivo</title>
+      <script type="module">
+        // Set theme from environment variable
+        // Available themes: "orange" (default), "indigo"
+        const theme = import.meta.env.VITE_THEME || 'orange';
+        document.documentElement.setAttribute('data-theme', theme);
+        console.log('🎨 Theme applied:', theme);
+      </script>
     </head>
 
     <body>

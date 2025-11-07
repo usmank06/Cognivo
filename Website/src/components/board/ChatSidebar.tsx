@@ -685,17 +685,19 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
               setIsResizing(true);
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255, 145, 77, 0.08)';
+              e.currentTarget.style.backgroundColor = 'var(--primary)';
+              e.currentTarget.style.opacity = '0.08';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.opacity = '1';
             }}
           >
             {/* Drag indicator */}
             <div style={{ 
               width: '3px', 
               height: '32px', 
-              backgroundColor: '#FF914D',
+              backgroundColor: 'var(--primary)',
               borderRadius: '9999px',
               boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
             }}></div>

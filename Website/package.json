@@ -71,6 +71,11 @@
             "dev:vite": "vite",
             "dev:api": "tsx api-server.js",
             "dev:python": "cd python-api && python main.py",
-            "build": "vite build"
+            "build": "vite build",
+            "theme": "node switch-theme.js",
+            "theme:orange": "node switch-theme.js orange",
+            "theme:indigo": "node switch-theme.js indigo",
+            "theme:green": "node switch-theme.js green",
+            "theme:monochrome": "node switch-theme.js monochrome"
       }
 }

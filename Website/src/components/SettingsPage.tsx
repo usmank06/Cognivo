@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Download, Key, Trash2, LogOut, Coins, DollarSign, User, Mail } from 'lucide-react';
+import { Download, Key, Trash2, LogOut, Coins, DollarSign, User, Mail, Palette } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { toast } from 'sonner';
-import { getUserData, changePassword, deleteUserAccount } from '../api/client';
+import { getUserData, changePassword, deleteUserAccount, updateUserTheme } from '../api/client';
 
 interface SettingsPageProps {
   username: string;
@@ -22,6 +23,7 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [userData, setUserData] = useState<any>(null);
+  const [currentTheme, setCurrentTheme] = useState('monochrome');
 
   useEffect(() => {
     loadUserData();
@@ -31,6 +33,33 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
     const result = await getUserData(username);
     if (result.success && result.user) {
       setUserData(result.user);
+      setCurrentTheme(result.user.theme || 'monochrome');
+    }
+  };
+
+  const handleThemeChange = async (theme: string) => {
+    const themeNames = {
+      monochrome: 'Slate',
+      orange: 'Ember',
+      indigo: 'Cosmic',
+      green: 'Forest'
+    };
+    
+    const result = await updateUserTheme(username, theme);
+    if (result.success) {
+      setCurrentTheme(theme);
+      document.documentElement.setAttribute('data-theme', theme);
+      toast.success(`Theme changed to ${themeNames[theme as keyof typeof themeNames]}`);
+      
+      // Update local storage
+      const savedSession = localStorage.getItem('userSession');
+      if (savedSession) {
+        const session = JSON.parse(savedSession);
+        session.userData.theme = theme;
+        localStorage.setItem('userSession', JSON.stringify(session));
+      }
+    } else {
+      toast.error('Failed to update theme');
     }
   };
 
@@ -134,6 +163,28 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
                 </span>
                 <span className="font-medium">{formatMoney(userData?.totalMoneySpent || 0)}</span>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Theme Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                Appearance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={currentTheme} onValueChange={handleThemeChange}>
+                <SelectTrigger id="theme-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monochrome">Slate – Professional minimalism</SelectItem>
+                  <SelectItem value="orange">Ember – Warm & energetic</SelectItem>
+                  <SelectItem value="indigo">Cosmic – Futuristic AI</SelectItem>
+                  <SelectItem value="green">Forest – Fresh & natural</SelectItem>
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
 

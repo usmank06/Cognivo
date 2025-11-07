@@ -73,3 +73,16 @@ export async function updateTokenUsage(username: string, tokens: number, cost: n
     return { success: false, error: 'Failed to connect to server' };
   }
 }
+
+export async function updateUserTheme(username: string, theme: string) {
+  try {
+    const response = await fetch(`${API_URL}/user/update-theme`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, theme }),
+    });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: 'Failed to connect to server' };
+  }
+}

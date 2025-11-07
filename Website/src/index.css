@@ -2416,9 +2416,8 @@ html, :host {
   }
 }
 
-/* Theme: Orange - Warm & Energetic */
-:root[data-theme="orange"],
-:root:not([data-theme]) {
+/* Theme: Ember - Warm & Energetic */
+:root[data-theme="orange"] {
   --font-size: 16px;
   --background: #FFF9F5;
   --foreground: #4B2E05;
@@ -2459,7 +2458,7 @@ html, :host {
   --sidebar-ring: #FF914D;
 }
 
-/* Theme: Indigo - Futuristic AI */
+/* Theme: Cosmic - Futuristic AI */
 :root[data-theme="indigo"] {
   --font-size: 16px;
   --background: #fafaff;
@@ -2501,7 +2500,7 @@ html, :host {
   --sidebar-ring: #635bff;
 }
 
-/* Theme: Green - Fresh & Natural */
+/* Theme: Forest - Fresh & Natural */
 :root[data-theme="green"] {
   --font-size: 16px;
   --background: #f7fef9;
@@ -2543,8 +2542,9 @@ html, :host {
   --sidebar-ring: #10b981;
 }
 
-/* Theme: Monochrome - Professional */
-:root[data-theme="monochrome"] {
+/* Theme: Slate - Professional Minimalism (Default) */
+:root[data-theme="monochrome"],
+:root:not([data-theme]) {
   --font-size: 16px;
   --background: #fafafa;
   --foreground: #171717;
@@ -2583,79 +2583,6 @@ html, :host {
   --sidebar-accent-foreground: #171717;
   --sidebar-border: #e5e5e5;
   --sidebar-ring: #404040;
-}
-
-/* Dark mode for Orange theme */
-:root[data-theme="orange"] .dark,
-:root:not([data-theme]) .dark {
-  --background: #1a0f00;
-  --foreground: #ffd8b2;
-  --card: #2d1a00;
-  --card-foreground: #ffd8b2;
-  --popover: #2d1a00;
-  --popover-foreground: #ffd8b2;
-  --primary: #ff914d;
-  --primary-foreground: #1a0f00;
-  --secondary: #4a2f0a;
-  --secondary-foreground: #ffd8b2;
-  --muted: #3d2508;
-  --muted-foreground: #b8936f;
-  --accent: #ff914d;
-  --accent-foreground: #1a0f00;
-  --destructive: #ef4444;
-  --destructive-foreground: #fff;
-  --border: #4a2f0a;
-  --input: #4a2f0a;
-  --ring: #ff914d;
-  --chart-1: #ff914d;
-  --chart-2: #ffb366;
-  --chart-3: #ffd8b2;
-  --chart-4: #ffe5d1;
-  --chart-5: #fff9f5;
-  --sidebar: #2d1a00;
-  --sidebar-foreground: #ffd8b2;
-  --sidebar-primary: #ff914d;
-  --sidebar-primary-foreground: #1a0f00;
-  --sidebar-accent: #3d2508;
-  --sidebar-accent-foreground: #ffd8b2;
-  --sidebar-border: #4a2f0a;
-  --sidebar-ring: #ff914d;
-}
-
-/* Dark mode for Indigo theme */
-:root[data-theme="indigo"] .dark {
-  --background: #0f0e1f;
-  --foreground: #e8e7ff;
-  --card: #1a1830;
-  --card-foreground: #e8e7ff;
-  --popover: #1a1830;
-  --popover-foreground: #e8e7ff;
-  --primary: #7c73ff;
-  --primary-foreground: #0f0e1f;
-  --secondary: #2a2642;
-  --secondary-foreground: #e8e7ff;
-  --muted: #221f3a;
-  --muted-foreground: #a29bff;
-  --accent: #a29bff;
-  --accent-foreground: #0f0e1f;
-  --destructive: #ef4444;
-  --destructive-foreground: #fff;
-  --border: #2a2642;
-  --input: #2a2642;
-  --ring: #7c73ff;
-  --chart-1: #7c73ff;
-  --chart-2: #a29bff;
-  --chart-3: #c7c3ff;
-  --chart-4: #e8e7ff;
-  --chart-5: #fafaff;
-  --sidebar: #1a1830;
-  --sidebar-foreground: #e8e7ff;
-  --sidebar-primary: #7c73ff;
-  --sidebar-primary-foreground: #0f0e1f;
-  --sidebar-accent: #221f3a;
-  --sidebar-accent-foreground: #e8e7ff;
-  --sidebar-border: #2a2642;
-  --sidebar-ring: #7c73ff;
 }
 
 html {

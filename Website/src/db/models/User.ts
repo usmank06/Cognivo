@@ -6,6 +6,7 @@ export interface IUser extends Document {
   password: string;
   totalTokensSpent: number;
   totalMoneySpent: number;
+  theme: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +38,11 @@ const UserSchema: Schema = new Schema(
     totalMoneySpent: {
       type: Number,
       default: 0,
+    },
+    theme: {
+      type: String,
+      default: 'monochrome',
+      enum: ['orange', 'indigo', 'green', 'monochrome'],
     },
   },
   {

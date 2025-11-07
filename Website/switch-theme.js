@@ -16,25 +16,25 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const AVAILABLE_THEMES = {
+  monochrome: {
+    name: 'Slate - Professional Minimalism (Default)',
+    description: 'Clean black, white, and grey theme',
+    primary: '#404040',
+  },
   orange: {
-    name: 'Orange - Warm & Energetic',
+    name: 'Ember - Warm & Energetic',
     description: 'Vibrant orange theme with warm tones',
     primary: '#FF914D',
   },
   indigo: {
-    name: 'Indigo - Futuristic AI',
+    name: 'Cosmic - Futuristic AI',
     description: 'Modern purple/indigo theme inspired by AI products',
     primary: '#635bff',
   },
   green: {
-    name: 'Green - Fresh & Natural',
+    name: 'Forest - Fresh & Natural',
     description: 'Calm emerald green theme with natural tones',
     primary: '#10b981',
-  },
-  monochrome: {
-    name: 'Monochrome - Professional',
-    description: 'Clean black, white, and grey theme',
-    primary: '#404040',
   },
 };
 

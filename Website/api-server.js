@@ -99,6 +99,25 @@ app.post('/api/user/change-password', async (req, res) => {
   }
 });
 
+app.post('/api/user/update-theme', async (req, res) => {
+  try {
+    const { username, theme } = req.body;
+    const { User } = await import('./src/db/models/User.ts');
+    
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.json({ success: false, error: 'User not found' });
+    }
+    
+    user.theme = theme;
+    await user.save();
+    
+    res.json({ success: true, theme: user.theme });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
 app.delete('/api/user/:username', async (req, res) => {
   try {
     const { username } = req.params;

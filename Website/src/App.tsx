@@ -27,6 +27,10 @@ export default function App() {
         setUserData(session.userData);
         setIsLoggedIn(true);
         setCurrentPage(session.lastPage || 'canvas');
+        // Apply saved theme
+        if (session.userData?.theme) {
+          document.documentElement.setAttribute('data-theme', session.userData.theme);
+        }
       } catch (error) {
         localStorage.removeItem('userSession');
       }
@@ -50,6 +54,10 @@ export default function App() {
     setUserData(data);
     setIsLoggedIn(true);
     setCurrentPage('canvas');
+    // Apply user's theme preference
+    if (data?.theme) {
+      document.documentElement.setAttribute('data-theme', data.theme);
+    }
   };
 
   const handleRegister = (user: string, data: any) => {
@@ -57,6 +65,10 @@ export default function App() {
     setUserData(data);
     setIsLoggedIn(true);
     setCurrentPage('canvas');
+    // Apply user's theme preference (default monochrome for new users)
+    if (data?.theme) {
+      document.documentElement.setAttribute('data-theme', data.theme);
+    }
   };
 
   const handleLogout = () => {

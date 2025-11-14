@@ -2542,6 +2542,48 @@ html, :host {
   --sidebar-ring: #10b981;
 }
 
+/* Theme: Corporate - Professional Blue (Cognivo Style) */
+:root[data-theme="corporate"] {
+  --font-size: 16px;
+  --background: #f8fafb;
+  --foreground: #0a2540;
+  --card: #ffffff;
+  --card-foreground: #0a2540;
+  --popover: #ffffff;
+  --popover-foreground: #0a2540;
+  --primary: #0066cc;
+  --primary-foreground: #fff;
+  --secondary: #e3f2fd;
+  --secondary-foreground: #0a2540;
+  --muted: #e8f4f8;
+  --muted-foreground: #425b76;
+  --accent: #1976d2;
+  --accent-foreground: #fff;
+  --destructive: #d32f2f;
+  --destructive-foreground: #fff;
+  --border: #bbdefb;
+  --input: #bbdefb;
+  --input-background: #fff;
+  --switch-background: #e3f2fd;
+  --font-weight-medium: 600;
+  --font-weight-normal: 400;
+  --ring: #0066cc;
+  --chart-1: #0066cc;
+  --chart-2: #1976d2;
+  --chart-3: #42a5f5;
+  --chart-4: #64b5f6;
+  --chart-5: #90caf9;
+  --radius: 0.375rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0a2540;
+  --sidebar-primary: #0066cc;
+  --sidebar-primary-foreground: #fff;
+  --sidebar-accent: #e3f2fd;
+  --sidebar-accent-foreground: #0a2540;
+  --sidebar-border: #bbdefb;
+  --sidebar-ring: #0066cc;
+}
+
 /* Theme: Slate - Professional Minimalism (Default) */
 :root[data-theme="monochrome"],
 :root:not([data-theme]) {

@@ -763,7 +763,7 @@ export function ChatSidebar({ currentCanvas, username, onReloadCanvas }: ChatSid
                               className={`
                                 max-w-[80%] rounded-xl px-4 py-2 shadow-sm
                                 ${message.role === 'user' 
-                                  ? 'bg-primary text-white' 
+                                  ? 'bg-primary/10 text-foreground border border-primary/20' 
                                   : 'bg-secondary/50 text-foreground border border-border'}
                               `}
                             >

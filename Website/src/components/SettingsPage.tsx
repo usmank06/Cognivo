@@ -40,6 +40,7 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
   const handleThemeChange = async (theme: string) => {
     const themeNames = {
       monochrome: 'Slate',
+      corporate: 'Corporate',
       orange: 'Ember',
       indigo: 'Cosmic',
       green: 'Forest'
@@ -176,10 +177,11 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
             <CardContent>
               <Select value={currentTheme} onValueChange={handleThemeChange}>
                 <SelectTrigger id="theme-select">
-                  <SelectValue />
+                  <SelectValue placeholder="Select theme" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="monochrome">Slate – Professional minimalism</SelectItem>
+                  <SelectItem value="corporate">Corporate – Professional blue</SelectItem>
                   <SelectItem value="orange">Ember – Warm & energetic</SelectItem>
                   <SelectItem value="indigo">Cosmic – Futuristic AI</SelectItem>
                   <SelectItem value="green">Forest – Fresh & natural</SelectItem>

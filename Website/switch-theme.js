@@ -17,9 +17,14 @@ const __dirname = path.dirname(__filename);
 
 const AVAILABLE_THEMES = {
   monochrome: {
-    name: 'Slate - Professional Minimalism (Default)',
+    name: 'Slate - Professional Minimalism',
     description: 'Clean black, white, and grey theme',
     primary: '#404040',
+  },
+  corporate: {
+    name: 'Corporate - Professional Blue (Default)',
+    description: 'Clean corporate blue theme inspired by business presentations',
+    primary: '#0066cc',
   },
   orange: {
     name: 'Ember - Warm & Energetic',

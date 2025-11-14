@@ -76,6 +76,7 @@
             "theme:orange": "node switch-theme.js orange",
             "theme:indigo": "node switch-theme.js indigo",
             "theme:green": "node switch-theme.js green",
-            "theme:monochrome": "node switch-theme.js monochrome"
+            "theme:monochrome": "node switch-theme.js monochrome",
+            "theme:corporate": "node switch-theme.js corporate"
       }
 }

@@ -42,7 +42,7 @@ const UserSchema: Schema = new Schema(
     theme: {
       type: String,
       default: 'corporate',
-      enum: ['orange', 'indigo', 'green', 'monochrome', 'corporate'],
+      enum: ['orange', 'indigo', 'green', 'monochrome', 'corporate', 'pitch'],
     },
   },
   {

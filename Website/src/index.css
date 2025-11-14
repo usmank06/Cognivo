@@ -2627,6 +2627,48 @@ html, :host {
   --sidebar-ring: #404040;
 }
 
+/* Theme: Pitch - Modern Bold Presentation */
+:root[data-theme="pitch"] {
+  --font-size: 16px;
+  --background: #F8F4EF;
+  --foreground: #0C1A4B;
+  --card: #ffffff;
+  --card-foreground: #0C1A4B;
+  --popover: #ffffff;
+  --popover-foreground: #0C1A4B;
+  --primary: #2F6BFF;
+  --primary-foreground: #fff;
+  --secondary: #F8F4EF;
+  --secondary-foreground: #0C1A4B;
+  --muted: #F8F4EF;
+  --muted-foreground: #1F1F1F;
+  --accent: #FF7A00;
+  --accent-foreground: #fff;
+  --destructive: #ef4444;
+  --destructive-foreground: #fff;
+  --border: #0C1A4B;
+  --input: #E8E4DF;
+  --input-background: #fff;
+  --switch-background: #E8E4DF;
+  --font-weight-medium: 600;
+  --font-weight-normal: 400;
+  --ring: #2F6BFF;
+  --chart-1: #2F6BFF;
+  --chart-2: #FF7A00;
+  --chart-3: #0C1A4B;
+  --chart-4: #FFD166;
+  --chart-5: #1F1F1F;
+  --radius: 1.5rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0C1A4B;
+  --sidebar-primary: #2F6BFF;
+  --sidebar-primary-foreground: #fff;
+  --sidebar-accent: #F8F4EF;
+  --sidebar-accent-foreground: #0C1A4B;
+  --sidebar-border: #E8E4DF;
+  --sidebar-ring: #2F6BFF;
+}
+
 html {
   font-size: var(--font-size);
 }

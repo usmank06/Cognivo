@@ -43,7 +43,8 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
       corporate: 'Corporate',
       orange: 'Ember',
       indigo: 'Cosmic',
-      green: 'Forest'
+      green: 'Forest',
+      pitch: 'Pitch'
     };
     
     const result = await updateUserTheme(username, theme);
@@ -185,6 +186,7 @@ export function SettingsPage({ username, onLogout }: SettingsPageProps) {
                   <SelectItem value="orange">Ember – Warm & energetic</SelectItem>
                   <SelectItem value="indigo">Cosmic – Futuristic AI</SelectItem>
                   <SelectItem value="green">Forest – Fresh & natural</SelectItem>
+                  <SelectItem value="pitch">Pitch – Modern bold presentation</SelectItem>
                 </SelectContent>
               </Select>
             </CardContent>

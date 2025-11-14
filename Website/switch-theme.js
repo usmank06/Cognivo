@@ -41,6 +41,11 @@ const AVAILABLE_THEMES = {
     description: 'Calm emerald green theme with natural tones',
     primary: '#10b981',
   },
+  pitch: {
+    name: 'Pitch - Modern Bold Presentation',
+    description: 'Bold pitch deck aesthetic with navy blue and bright accents',
+    primary: '#2F6BFF',
+  },
 };
 
 const theme = process.argv[2];

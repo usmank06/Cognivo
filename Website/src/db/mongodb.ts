@@ -30,12 +30,15 @@ export async function connectDB() {
       instance: {
         dbName: process.env.MONGODB_DB_NAME || 'cognivo',
         storageEngine: (process.env.MONGODB_STORAGE_ENGINE as any) || 'wiredTiger',
+        port: parseInt(process.env.MONGODB_PORT || '27017'),
         // Enable persistence - data will be stored in ./mongodb-data/
         dbPath: dbPath,
       },
     });
 
     const uri = mongoServer.getUri();
+    console.log('\n🗄️  MongoDB URL:', uri);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     await mongoose.connect(uri);
     isConnected = true;

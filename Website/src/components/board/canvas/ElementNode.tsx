@@ -23,30 +23,39 @@ export function ElementNode({ id, data, selected }: ElementNodeProps) {
   const kind = data.kind as ElementKind
   const text = data.text ?? 'Text'
   
+  // ScoreCard-specific data
+  const value = data.value ?? '0'
+  const percentageChange = data.percentageChange ?? 0
+  const changeLabel = data.changeLabel ?? ''
+  
   // Use design system defaults based on element type
   const isDivider = kind === 'horizontalDivider' || kind === 'verticalDivider'
   
   const fontSize = data.fontSize ?? (
     kind === 'title' ? DESIGN_SYSTEM.elementDefaults.title.fontSize :
     kind === 'sectionHeader' ? DESIGN_SYSTEM.elementDefaults.sectionHeader.fontSize :
+    kind === 'scoreCard' ? 32 :
     DESIGN_SYSTEM.elementDefaults.text.fontSize
   )
   
   const fontWeight = data.fontWeight ?? (
     kind === 'title' ? DESIGN_SYSTEM.elementDefaults.title.fontWeight :
     kind === 'sectionHeader' ? DESIGN_SYSTEM.elementDefaults.sectionHeader.fontWeight :
+    kind === 'scoreCard' ? '700' :
     DESIGN_SYSTEM.elementDefaults.text.fontWeight
   )
   
-  const textAlign = data.textAlign ?? 'left'
+  const textAlign = data.textAlign ?? (kind === 'scoreCard' ? 'center' : 'left')
   
   const textColor = data.textColor ?? (
     kind === 'title' || kind === 'sectionHeader' ? DESIGN_SYSTEM.colors.neutral[800] :
+    kind === 'scoreCard' ? DESIGN_SYSTEM.colors.neutral[900] :
     DESIGN_SYSTEM.colors.neutral[700]
   )
   
   const bgColor = data.backgroundColor ?? (
     kind === 'sectionHeader' ? DESIGN_SYSTEM.colors.neutral[50] :
+    kind === 'scoreCard' ? '#ffffff' :
     isDivider ? 'transparent' :
     '#ffffff'
   )
@@ -75,6 +84,9 @@ export function ElementNode({ id, data, selected }: ElementNodeProps) {
   const setBgColor = (val: string) => updateNode(id, (n: RFNode) => ({ ...n, data: { ...n.data, backgroundColor: val } }))
   const setDividerColor = (val: string) => updateNode(id, (n: RFNode) => ({ ...n, data: { ...n.data, dividerColor: val } }))
   const setDividerThickness = (val: number) => updateNode(id, (n: RFNode) => ({ ...n, data: { ...n.data, dividerThickness: val } }))
+  const setValue = (val: string) => updateNode(id, (n: RFNode) => ({ ...n, data: { ...n.data, value: val } }))
+  const setPercentageChange = (val: number) => updateNode(id, (n: RFNode) => ({ ...n, data: { ...n.data, percentageChange: val } }))
+  const setChangeLabel = (val: string) => updateNode(id, (n: RFNode) => ({ ...n, data: { ...n.data, changeLabel: val } }))
 
   const renderElement = () => {
     switch (kind) {
@@ -149,6 +161,80 @@ export function ElementNode({ id, data, selected }: ElementNodeProps) {
             }}
           >
             {text}
+          </div>
+        )
+      
+      case 'scoreCard':
+        const isPositive = percentageChange >= 0
+        const changeColor = isPositive ? '#10b981' : '#ef4444' // Green for positive, red for negative
+        const changeIcon = isPositive ? '▲' : '▼'
+        
+        return (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+            padding: '16px 12px',
+            gap: '8px'
+          }}>
+            {/* Label */}
+            <div
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={onTextBlur}
+              onKeyDown={onTextKeyDown}
+              style={{
+                fontSize: 13,
+                fontWeight: '600',
+                color: DESIGN_SYSTEM.colors.neutral[600],
+                outline: 'none',
+                cursor: 'text',
+                userSelect: 'text',
+                textAlign: 'center',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}
+            >
+              {text}
+            </div>
+            
+            {/* Main Value */}
+            <div style={{
+              fontSize: fontSize || 32,
+              fontWeight: fontWeight || '700',
+              color: textColor,
+              lineHeight: 1,
+              textAlign: 'center'
+            }}>
+              {value}
+            </div>
+            
+            {/* Percentage Change Indicator */}
+            {percentageChange !== 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: 13,
+                fontWeight: '600',
+                color: changeColor
+              }}>
+                <span>{changeIcon}</span>
+                <span>{Math.abs(percentageChange)}%</span>
+                {changeLabel && (
+                  <span style={{
+                    color: DESIGN_SYSTEM.colors.neutral[500],
+                    fontWeight: '400',
+                    fontSize: 12
+                  }}>
+                    {changeLabel}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         )
       
@@ -228,6 +314,7 @@ export function ElementNode({ id, data, selected }: ElementNodeProps) {
               <option value="text">Text</option>
               <option value="title">Title</option>
               <option value="sectionHeader">Section Header</option>
+              <option value="scoreCard">Score Card</option>
               <option value="horizontalDivider">Horizontal Divider</option>
               <option value="verticalDivider">Vertical Divider</option>
             </select>
@@ -260,6 +347,57 @@ export function ElementNode({ id, data, selected }: ElementNodeProps) {
                 value={textColor} 
                 onChange={(e: any) => setTextColor(e.target.value)} 
                 style={{ width: 40, height: 24, border: '1px solid #e5e7eb', borderRadius: 6, cursor: 'pointer' }} 
+              />
+              
+              <label style={{ fontSize: 11, color: '#555' }}>BG</label>
+              <input 
+                type="color" 
+                value={bgColor} 
+                onChange={(e: any) => setBgColor(e.target.value)} 
+                style={{ width: 40, height: 24, border: '1px solid #e5e7eb', borderRadius: 6, cursor: 'pointer' }} 
+              />
+            </div>
+          )}
+
+          {/* Score Card specific controls */}
+          {kind === 'scoreCard' && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', borderTop: '1px solid #f0f0f0', paddingTop: 8 }}>
+              <label style={{ fontSize: 11, color: '#555' }}>Value</label>
+              <input 
+                type="text" 
+                value={value} 
+                onChange={(e: any) => setValue(e.target.value)} 
+                placeholder="$45,230"
+                style={{ width: 100, fontSize: 11, padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: 6 }} 
+              />
+              
+              <label style={{ fontSize: 11, color: '#555' }}>Change %</label>
+              <input 
+                type="number" 
+                value={percentageChange} 
+                onChange={(e: any) => setPercentageChange(parseFloat(e.target.value) || 0)} 
+                placeholder="12.5"
+                step="0.1"
+                style={{ width: 70, fontSize: 11, padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: 6 }} 
+              />
+              
+              <label style={{ fontSize: 11, color: '#555' }}>Label</label>
+              <input 
+                type="text" 
+                value={changeLabel} 
+                onChange={(e: any) => setChangeLabel(e.target.value)} 
+                placeholder="vs last month"
+                style={{ width: 110, fontSize: 11, padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: 6 }} 
+              />
+              
+              <div className="h-4 w-px bg-border mx-1" />
+              
+              <label style={{ fontSize: 11, color: '#555' }}>Font Size</label>
+              <input 
+                type="number" 
+                value={fontSize} 
+                onChange={(e: any) => setFontSize(parseInt(e.target.value) || 32)} 
+                style={{ width: 50, fontSize: 11, padding: '2px 6px', border: '1px solid #e5e7eb', borderRadius: 6 }} 
               />
               
               <label style={{ fontSize: 11, color: '#555' }}>BG</label>

@@ -17,6 +17,7 @@ export type ElementKind =
   | 'text'
   | 'title' 
   | 'sectionHeader' 
+  | 'scoreCard'
   | 'horizontalDivider' 
   | 'verticalDivider'
 
@@ -82,6 +83,11 @@ export type NodeData = {
   // Divider-specific
   dividerColor?: string
   dividerThickness?: number
+  
+  // ScoreCard-specific
+  value?: string | number // Main metric value (e.g., "$45,230" or 45230)
+  percentageChange?: number // Percentage change (e.g., 12.5 for +12.5%)
+  changeLabel?: string // Optional label for the change (e.g., "vs last month")
 }
 
 export type RFNode = {
